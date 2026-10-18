@@ -59,10 +59,6 @@ class Draw:
         elif chord.length == 4:
             pad.addstr(5, y, "▃▃")
 
-        # elif chord.length == 0.5:
-        #     pad.addstr(4, y, "Q")
-        #     pad.addstr(5, y, "u")
-
     def drawAttributes(pad, note, chord):
         x = note.pitch
         y = chord.y
@@ -99,14 +95,3 @@ class Draw:
         pad.addstr("|n: natural|   ")
         pad.addstr("|ENTER: reformat bars")
         pad.addstr("|s: save file")
-
-
-
-
-
-
-        # pad.addstr("^UP/DOWN: transposition by 1")
-        # pad.addstr("^UP/DOWN: transposition by 1")
-        # pad.addstr("^UP/DOWN: transposition by 1")
-        # pad.addstr("^UP/DOWN: transposition by 1")
-        

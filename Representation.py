@@ -81,7 +81,7 @@ class Representation:
 
         notes = string[index + 1::]
 
-
+        # While there are still 
         while len(notes) > 1:
             char = notes[0]
             if char == "|":
@@ -208,5 +208,6 @@ class Representation:
         chord.length = length
 
         print("extractChord returning substring: " + substring)
+
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]
