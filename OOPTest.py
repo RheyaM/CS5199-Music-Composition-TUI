@@ -12,9 +12,10 @@ from Representation import Representation
 import math
 import time
 
-# TODO: Delete should delete only one note, not the entire chord
 # TODO: if navigateToNote() always comes after drawChord then just put it in drawChord
 # TODO: be able to display key
+
+file = ""
 
 note_dict = {"c": 11, "d": 10, "e": 9, "f": 8, "g": 7, "a": 6, "b": 5}
 all_notes = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
@@ -170,8 +171,11 @@ def main(stdscr):
             case "S":
                 saveAs(stdscr, textbox)
 
-            case "l":
+            case "p":
                 refreshStavePad()
+
+            case "l" | "L":
+                load(stdscr)
 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -193,7 +197,7 @@ def main(stdscr):
         textbox.refresh(0, 0, stdscr_height - 5, 0, stdscr_height - 4, stdscr_width - 2)
 
         hints.refresh(0, 0, stdscr_height - 2, 0, stdscr_height - 1, stdscr_width - 2)
-        
+
         x = refreshStavePad()
 
 
@@ -205,6 +209,41 @@ def refreshStavePad():
         x += 13
 
     return x
+
+def load(stdscr):
+    # update global file string
+    global file
+    global score
+
+    stdscr.erase()
+
+    stdscr.addstr(stdscr_height - 7, 1, "Input your file name")
+    stdscr.addstr(stdscr_height - 1, 1, "^G: Confirm          To cancel, leave empty")
+
+    textinput = curses.newwin(2, 41, stdscr_height - 5, 2)
+    box = Textbox(textinput)
+    rectangle(stdscr, stdscr_height - 6, 1, stdscr_height - 3, 43)
+    stdscr.refresh()
+
+    box.edit()
+    text = box.gather()
+
+    try:
+        with open(text, "r") as myfile:
+            # print("hey")
+            pass
+                
+        myfile.close()
+
+        file = text
+
+    except:
+        pass
+
+    stdscr.clear()
+    drawEntireScore(score)
+    refreshStavePad()
+
 
 
 def save(textbox):
@@ -219,12 +258,13 @@ def save(textbox):
 
     myfile.close()
 
+
 def saveAs(stdscr, textbox):
-    stdscr.erase()
+    stdscr.clear()
 
     stdscr.addstr(stdscr_height - 7, 1, "Input your file name")
     stdscr.addstr(stdscr_height - 1, 1, "^G: Confirm          To cancel, leave empty")
-    # pad.refresh()
+
     textinput = curses.newwin(2, 41, stdscr_height - 5, 2)
     box = Textbox(textinput)
     rectangle(stdscr, stdscr_height - 6, 1, stdscr_height - 3, 43)
@@ -238,12 +278,11 @@ def saveAs(stdscr, textbox):
         
     myfile.close()
 
-
-
-
     stdscr.clear()
-    drawEntireScore(score)
-    refreshStavePad()
+    textinput.erase()
+
+    stdscr.refresh()
+
 
 def printAllChords(pad):
     global current_bar
