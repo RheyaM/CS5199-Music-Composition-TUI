@@ -713,10 +713,11 @@ def removeNote(pad):
     global current_chord
     global current_note
 
-    current_note = current_chord.removeNote(current_note)
-    drawChord(pad, current_chord)
+    if not current_chord.rest:
+        current_note = current_chord.removeNote(current_note)
+        drawChord(pad, current_chord)
 
-    navigateToNote()
+        navigateToNote()
 
 def parseNote(stave_pad, note):
     global current_chord
