@@ -67,11 +67,11 @@ def main(stdscr):
 
     textbox = curses.newpad(3, stdscr_width)
     textbox.addstr(0, 0, Representation.scoreToString(score, beats))
-    textbox.refresh(0, 0, stdscr_height - 5, 0, stdscr_height - 4, stdscr_width - 2)
+    textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
 
-    hints = curses.newpad(3, stdscr_width)
+    hints = curses.newpad(3, 300)
 
-    Draw.drawHints(hints)
+    Draw.drawHints(hints, stdscr_width)
     stdscr.refresh()
 
     pads.append(stave_pad)
@@ -82,8 +82,8 @@ def main(stdscr):
     navigateToNote()
     stave_pad.refresh(0, 0, 1, 1, stave_height, stdscr_width - 2)
 
-    textbox.refresh(0, 0, stdscr_height - 5, 0, stdscr_height - 4, stdscr_width - 2)
-    hints.refresh(0, 0, stdscr_height - 2, 0, stdscr_height - 1, stdscr_width - 2)
+    textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
+    hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
     # textinput = curses.newwin(2, 41, 15, 1)
     # box = Textbox(textinput)
@@ -179,11 +179,11 @@ def main(stdscr):
 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
+                Draw.drawHints(hints, stdscr_width)
                 redoAllYs(score)
                 drawEntireScore(score)
                 navigateToNote()
 
-                # stave_pad.addstr(0, 0, str([stdscr_height, stdscr_width]))
 
             case _:
                 if char in all_notes:
@@ -194,9 +194,9 @@ def main(stdscr):
 
         textbox.clear()
         textbox.addstr(0, 0, Representation.scoreToString(score, beats))
-        textbox.refresh(0, 0, stdscr_height - 5, 0, stdscr_height - 4, stdscr_width - 2)
+        textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
 
-        hints.refresh(0, 0, stdscr_height - 2, 0, stdscr_height - 1, stdscr_width - 2)
+        hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
         x = refreshStavePad()
 
@@ -273,10 +273,12 @@ def saveAs(stdscr, textbox):
     box.edit()
     text = box.gather()
 
-    with open(text + ".txt", "a") as myfile:
-        myfile.write("\n" + textbox.instr(0, 0).decode("utf-8"))
-        
-    myfile.close()
+    if text != "":
+
+        with open(text + ".txt", "a") as myfile:
+            myfile.write(textbox.instr(0, 0).decode("utf-8"))
+            
+        myfile.close()
 
     stdscr.clear()
     textinput.erase()

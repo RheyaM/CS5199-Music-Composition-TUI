@@ -2,6 +2,12 @@ import curses
 import math
 
 class Draw:
+
+    hints = {"q": "Quit", "s": "save file", "S": "save file as", "Opt-Up/Down": "transpose by 1", 
+             "SHIFT-Up/Down": "transpose by an octave", "SHIFT-Left/Right": "swap notes", 
+             "[,]": "adjust note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
+             "n": "natural", "ENTER": "Reformat bars"}
+
     def drawTreble(pad, x, y):
         pad.addstr(x, y, "|\\")
         pad.addstr(x + 1, y, "| |")
@@ -82,16 +88,49 @@ class Draw:
             pad.addstr(x, y - 1, "    ")
         pad.addstr(11, y - 1, "    ")
 
-    def drawHints(pad):
-        pad.addstr("|q: quit|  ")
-        pad.addstr("|Opt-UP/DOWN: transposition by 1|   ")
-        pad.addstr("|SHIFT-UP/DOWN: transposition by an octave|   ")
-        pad.addstr("|SHIFT-LEFT/RIGHT: swap notes|   ")
-        pad.addstr("\n|[ and ]: adjust note length|   ")
-        pad.addstr("|!: staccato|   ")
-        pad.addstr("|>: accent|   ")
-        pad.addstr("|#: sharp|   ")
-        pad.addstr("|-: flat|   ")
-        pad.addstr("|n: natural|   ")
-        pad.addstr("|ENTER: reformat bars")
-        pad.addstr("|s: save file")
+    def drawHints(pad, width):
+        pad.erase()
+
+        x = 0
+        y = 0
+
+        for key in Draw.hints.keys():
+
+            expl = Draw.hints[key]
+
+            totalLen = len(key) + 3 + len(expl)
+            if y + totalLen >= width:
+                x += 1
+                y = 0
+
+            pad.addstr(x, y, key, curses.A_STANDOUT)
+            y += len(key) + 1
+            pad.addstr(x, y, expl)
+            y += len(expl) + 3
+
+
+        # pad.addstr(x, 0, "q", curses.A_STANDOUT)
+        # pad.addstr(x, 2, "Quit")
+        # pad.addstr(x, 8, "Opt-Up/Down", curses.A_STANDOUT)
+        # pad.addstr(x, 20, "transpose by 1")
+        # pad.addstr(x, 36, "SHIFT-Up/Down", curses.A_STANDOUT)
+        # pad.addstr(x, 50, "transpose by an octave")
+        # pad.addstr(x, 74, "SHIFT-Left/Right", curses.A_STANDOUT)
+        # pad.addstr(x, 91, "swap notes")
+        # pad.addstr(x, 0, "[,]", curses.A_STANDOUT)
+        # pad.addstr(x, 4, "adjust note length")
+        # pad.addstr(x, 24, "!", curses.A_STANDOUT)
+        # pad.addstr(x, 26, "staccato")
+        # pad.addstr(x, 36, ">", curses.A_STANDOUT)
+        # pad.addstr(x, 38, "accent")
+        # pad.addstr(x, 46, "#", curses.A_STANDOUT)
+        # pad.addstr(x, 48, "sharp")
+        # pad.addstr(x, 55, "-", curses.A_STANDOUT)
+        # pad.addstr(x, 57, "flat")
+        # pad.addstr(x, 63, "n", curses.A_STANDOUT)
+        # pad.addstr(x, 65, "natural")
+
+        # pad.addstr("|ENTER: reformat bars|   ")
+        # pad.addstr("\n|s: save file|   ")
+        # pad.addstr("|S: save file as|   ")
+

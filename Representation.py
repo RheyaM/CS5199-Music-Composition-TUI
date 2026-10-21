@@ -81,7 +81,7 @@ class Representation:
 
         notes = string[index + 1::]
 
-        # While there are still 
+        # While there are still bars to extract
         while len(notes) > 1:
             char = notes[0]
             if char == "|":
