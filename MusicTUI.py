@@ -126,10 +126,10 @@ def main(stdscr):
             case "KEY_RIGHT" | "KEY_LEFT":
                 horizontalNavigation(stave_pad, char)
 
-            case "kDN5":
+            case "kDN5" | ",":
                 transpose("down", stave_pad, 1)
 
-            case "kUP5":
+            case "kUP5" | ".":
                 transpose("up", stave_pad, 1)
 
             case "KEY_SR":
@@ -163,7 +163,7 @@ def main(stdscr):
                 decLength(stave_pad)
 
             case "]":
-                incLength(stave_pad)
+                incLength()
 
             case "s":
                 save(textbox)
@@ -230,7 +230,6 @@ def load(stdscr):
 
     try:
         with open(text, "r") as myfile:
-            # print("hey")
             pass
                 
         myfile.close()
@@ -449,7 +448,7 @@ def decLength(pad):
     drawEntireScore(score)
     navigateToNote()
 
-def incLength(pad):
+def incLength():
     global current_chord
 
     if current_chord.length == 2 or current_chord.length == 3:
