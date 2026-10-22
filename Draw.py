@@ -107,30 +107,3 @@ class Draw:
             y += len(key) + 1
             pad.addstr(x, y, expl)
             y += len(expl) + 3
-
-
-        # pad.addstr(x, 0, "q", curses.A_STANDOUT)
-        # pad.addstr(x, 2, "Quit")
-        # pad.addstr(x, 8, "Opt-Up/Down", curses.A_STANDOUT)
-        # pad.addstr(x, 20, "transpose by 1")
-        # pad.addstr(x, 36, "SHIFT-Up/Down", curses.A_STANDOUT)
-        # pad.addstr(x, 50, "transpose by an octave")
-        # pad.addstr(x, 74, "SHIFT-Left/Right", curses.A_STANDOUT)
-        # pad.addstr(x, 91, "swap notes")
-        # pad.addstr(x, 0, "[,]", curses.A_STANDOUT)
-        # pad.addstr(x, 4, "adjust note length")
-        # pad.addstr(x, 24, "!", curses.A_STANDOUT)
-        # pad.addstr(x, 26, "staccato")
-        # pad.addstr(x, 36, ">", curses.A_STANDOUT)
-        # pad.addstr(x, 38, "accent")
-        # pad.addstr(x, 46, "#", curses.A_STANDOUT)
-        # pad.addstr(x, 48, "sharp")
-        # pad.addstr(x, 55, "-", curses.A_STANDOUT)
-        # pad.addstr(x, 57, "flat")
-        # pad.addstr(x, 63, "n", curses.A_STANDOUT)
-        # pad.addstr(x, 65, "natural")
-
-        # pad.addstr("|ENTER: reformat bars|   ")
-        # pad.addstr("\n|s: save file|   ")
-        # pad.addstr("|S: save file as|   ")
-

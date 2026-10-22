@@ -866,6 +866,10 @@ def drawBar(barIndex):
         pad.addstr(8, start_y, "\u2503" + (" " * length) + "\u2503")
         pad.addstr(9, start_y, "┸" + ("\u2500" * length) + "\u251A")
 
+        if start_y == 0:
+            pad.addstr(1, start_y, "\u250E")
+            pad.addstr(9, start_y, "\u2516")
+
 
         for beat in bar.beats:
             drawBeat(pad, beat)
