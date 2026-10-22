@@ -66,7 +66,7 @@ def main(stdscr):
     stave_pad = curses.newpad(15, 300)
 
     textbox = curses.newpad(3, stdscr_width)
-    textbox.addstr(0, 0, Representation.scoreToString(score, beats))
+    textbox.addstr(1, 0, Representation.scoreToString(score, beats))
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
 
     hints = curses.newpad(3, 300)
@@ -166,7 +166,7 @@ def main(stdscr):
                 incLength()
 
             case "s":
-                save(textbox)
+                save(stdscr, textbox)
 
             case "S":
                 saveAs(stdscr, textbox)
@@ -193,7 +193,7 @@ def main(stdscr):
                     stave_pad.addstr(0, 0, char)
 
         textbox.clear()
-        textbox.addstr(0, 0, Representation.scoreToString(score, beats))
+        textbox.addstr(1, 0, Representation.scoreToString(score, beats))
         textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
@@ -245,20 +245,27 @@ def load(stdscr):
 
 
 
-def save(textbox):
-    for pad in pads:
-        [y, x] = pad.getmaxyx()
-        with open("test.txt", "a") as myfile:
-            for i in range(y):
-                myfile.write("\n" + pad.instr(i, 0).decode("utf-8"))
+def save(stdscr, textbox):
 
-    with open("string.txt", "a") as myfile:
-        myfile.write("\n" + textbox.instr(0, 0).decode("utf-8"))
+    # Writing the stave itself to the .txt file:
+    # for pad in pads:
+    #     [y, x] = pad.getmaxyx()
+    #     with open("test.txt", "a") as myfile:
+    #         for i in range(y):
+    #             myfile.write("\n" + pad.instr(i, 0).decode("utf-8"))
 
-    myfile.close()
+    if file != "":
+        with open(file, "a") as myfile:
+            myfile.write("\n" + textbox.instr(0, 0).decode("utf-8"))
+
+        myfile.close()
+    else:
+        saveAs(stdscr, textbox)
 
 
 def saveAs(stdscr, textbox):
+    global file
+
     stdscr.clear()
 
     stdscr.addstr(stdscr_height - 7, 1, "Input your file name")
@@ -278,6 +285,8 @@ def saveAs(stdscr, textbox):
             myfile.write(textbox.instr(0, 0).decode("utf-8"))
             
         myfile.close()
+
+        file = text + ".txt"
 
     stdscr.clear()
     textinput.erase()

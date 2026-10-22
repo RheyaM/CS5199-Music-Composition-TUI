@@ -3,7 +3,7 @@ import math
 
 class Draw:
 
-    hints = {"q": "Quit", "s": "save file", "S": "save file as", "Opt-Up/Down": "transpose by 1", 
+    hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes" , "Opt-Up/Down": "transpose by 1", 
              "SHIFT-Up/Down": "transpose by an octave", "SHIFT-Left/Right": "swap notes", 
              "[,]": "adjust note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
              "n": "natural", "ENTER": "Reformat bars"}
