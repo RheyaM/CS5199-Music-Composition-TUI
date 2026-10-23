@@ -2,7 +2,7 @@ import re
 from Bar import Bar
 import Beat
 from Chord import Chord
-import Note
+from Note import Note
 import Draw
 
 class Representation:
@@ -112,6 +112,10 @@ class Representation:
 
             elif ch in Representation.note_dict.keys() or ch == "r":
                 [pitch, barNotes] = Representation.getChordNote(barNotes)
+
+                [func, barNotes] = Representation.extractNoteAttributes(barNotes)
+
+                # Determining the length of the note
                 [length, barNotes] = Representation.extractLength(barNotes)
 
                 if length is None:
@@ -122,6 +126,9 @@ class Representation:
                     Representation.current_length = length
 
                 chord = Chord(pitch, length, 0)
+
+                func(chord.notes[0])
+
                 totalLength += chord.length
 
             bar.beats[currentBeat].addChord(-1, chord)
@@ -143,7 +150,7 @@ class Representation:
 
         if length:
             if length.group(1)[0] == ".":
-                return [float(length.group(1)), substring[length.end(1)]]
+                return [float(length.group(1)), substring[length.end(1)::]]
             return [int(length.group(1)), substring[length.end(1)::]]
         return [None, substring]
 
@@ -156,7 +163,7 @@ class Representation:
         indicators = re.search("^('+)[.]*", substring)
         if indicators:
             number = len(indicators.group(1))
-            return [number, substring.replace(indicators.group(1), "")]
+            return [number, substring[indicators.end(1)::]]
 
         return [0, substring]
 
@@ -183,13 +190,34 @@ class Representation:
         return [None, substring]
 
 
+    def extractNoteAttributes(substring):
+        def passFunc(self):
+            pass
+
+        if len(substring) == 0:
+            return [passFunc, substring]
+
+        match substring[0]:
+            case "#":
+                return [Note.toggleSharp, substring[1::]]
+
+            case "-":
+                return [Note.toggleFlat(), substring[1::]]
+
+            case "n":
+                return [Note.toggleNatural(), substring[1::]]
+
+            case _:
+                return [passFunc, substring]
+
+                
     # Given a substring beginning with "<"
     def extractChord(substring):
         global note_dict 
 
         print("Extracting chord: " + substring)
 
-        notes = re.search("^<([a-z',]+)>.*", substring)
+        notes = re.search("^<([a-z',#-]+)>.*", substring)
 
         chord = Chord(-1, 0, 0, True)
         chord.removeNote(chord.notes[0])
@@ -200,7 +228,10 @@ class Representation:
         while ch != ">":
 
             [pitch, substring] = Representation.getChordNote(substring[0::])
-            chord.addNote(pitch)
+            note = chord.addNote(pitch)
+
+            [func, substring] = Representation.extractNoteAttributes(substring)
+            func(note)
 
             ch = substring[0]
 
