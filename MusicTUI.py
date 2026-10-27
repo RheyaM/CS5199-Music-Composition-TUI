@@ -372,26 +372,43 @@ def redoAllPads(score):
     global pads
 
     end_y = 11
+    currentPad = 0
 
     for bar in score:
 
-        # If the bar doesn't start where the previous ended, shift it left
-        if bar.y != end_y and bar.y != 0:
+        # If the bar doesn't start where the previous ended, shift it left/right
+        
+        # This must check that theyre acc in the same pad tho...
+        if bar.y != end_y and bar.pad == currentPad:
+            open("log.txt", "a").write("\nBar " + str(score.index(bar)) + " didn't start where previous ended. Shifted by " + str(end_y) + " - " + str(bar.y))
             bar.shiftBar(end_y - bar.y)
+            
 
         # If the bar is overflowing, update its pad, y, and endy values
         if bar.endy >= stdscr_width - 3:
+            with open("log.txt", "a") as myfile:
+                myfile.write("\nOverflow at bar " + str(score.index(bar)) + ". endy is " + str(bar.endy))
+            myfile.close()
+
             bar.pad += 1
             bar.shiftBar(bar.y * -1)
 
             if bar.pad >= len(pads):
                 pads.append(curses.newpad(14, 300))
 
+            with open("log.txt", "a") as myfile:
+                myfile.write("\nBar " + str(score.index(bar)) + "'s y: " + str(bar.y))
+                myfile.write("\nBar " + str(score.index(bar)) + "'s endy: " + str(bar.endy))
+            myfile.close()
+
+        currentPad = bar.pad
         end_y = bar.endy
 
+    padlist = [bar.pad for bar in score]
     with open("log.txt", "a") as myfile:
-        for bar in score:
-            myfile.write(" " + str(bar.pad))
+        myfile.write("\n")
+        myfile.write(str(padlist))
+    myfile.close()
 
 
 def redoBar(pad):
@@ -409,6 +426,7 @@ def redoBar(pad):
 
 
 def shiftElementsRight(pad, change):
+    open("log.txt", "a").write("\nIn shiftElementsRight. Change:" + str(change))
     global current_chord
     global current_bar
 
@@ -422,15 +440,16 @@ def shiftElementsRight(pad, change):
     for i in range(current_beat + 1, beats):
         score[current_bar].beats[i].shiftBeat(change)
 
-    score[current_bar].endy = score[current_bar].beats[-1].chords[-1].y + 4
-    # with open("log.txt", "a") as myfile:
-    #     myfile.write("\nChords in the beat: " + str(score[current_bar].beats[current_beat].chords))
-    #     myfile.write("\nChanging bar " + str(current_bar) + "'s endy to " + str(score[current_bar].endy))
-    # myfile.close()
+    # If there's another bar in the same pad
+    if current_bar < len(score) - 1 and score[current_bar + 1].pad == score[current_bar].pad:
+        score[current_bar].endy = score[current_bar].beats[-1].chords[-1].y + 4
+        open("log.txt", "a").write("\nAnother bar in pad " + str(score[current_bar].pad)
+                                           + ". Updated bar "+ str(current_bar) + 
+                                           " endy to " + str(score[current_bar].endy))
 
     # shift all remaining bars
-    for i in range(current_bar + 1, len(score)):
-        score[i].shiftBar(change)
+    # for i in range(current_bar + 1, len(score)):
+    #     score[i].shiftBar(change)
 
     redoAllPads(score)
 
@@ -440,9 +459,11 @@ def shiftElementsRight(pad, change):
     pad.addstr(0, 0, str([b.y for b in score]))
 
 def decLength(pad):
+    open("log.txt", "a").write("\nIn decLength")
     global current_chord
     global current_note
     global current_beat
+    
 
     if current_chord.length == 4 or current_chord.length == 3:
         current_chord.length -= 1
@@ -458,18 +479,18 @@ def decLength(pad):
 
     # If the next chord is not far enough from the newly created current chord, shift it along
     if nextChord and (nextChord.y < current_chord.y + 4):
+        open("log.txt", "a").write("\nNext chord not far enough from newly created chord")
         shiftElementsRight(pad, 5 - (nextChord.y - current_chord.y))
         pad.addstr(0, 0, str(nextChord.y))
 
     # If its the last chord
     if current_chord.y + 5 > score[current_bar].endy:
+        open("log.txt", "a").write("\nOvertook bar end")
         shiftElementsRight(pad, 5 - (score[current_bar].endy - current_chord.y))
     
     # If its not the last bar and the next bar doesn't start where it should 
     if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
-        with open("log.txt", "a") as myfile:
-            myfile.write("shift")
-        myfile.close()
+        open("log.txt", "a").write("\nNext bar doesn't start where it should")
         redoAllPads(score)
 
 
@@ -890,12 +911,17 @@ def drawBar(barIndex):
             pad.addstr(1, start_y, "\u250E")
             pad.addstr(9, start_y, "\u2516")
 
-
         for beat in bar.beats:
             drawBeat(pad, beat)
 
         if barIndex == 0:
             Draw.drawBeginning(pad)
+
+        if barIndex < len(score) - 1 and score[barIndex + 1].pad > score[barIndex].pad:
+            [height, width] = pad.getmaxyx()
+            for i in range(height):
+                pad.move(i, end_y + 3)
+                pad.clrtoeol()
 
 
 def drawBeat(pad, beat):
