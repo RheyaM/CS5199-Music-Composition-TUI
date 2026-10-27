@@ -180,7 +180,7 @@ def main(stdscr):
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
                 Draw.drawHints(hints, stdscr_width)
-                redoAllYs(score)
+                redoAllPads(score)
                 drawEntireScore(score)
                 navigateToNote()
 
@@ -367,7 +367,8 @@ def shift(pad, dir):
 
 
 # Redo all y values of every bar, beat and chord to get true y values
-def redoAllYs(score):
+# TODO: change this so it only redoes ys from the changed bar. Can be from start oso
+def redoAllPads(score):
     global pads
 
     end_y = 11
@@ -387,6 +388,10 @@ def redoAllYs(score):
                 pads.append(curses.newpad(14, 300))
 
         end_y = bar.endy
+
+    with open("log.txt", "a") as myfile:
+        for bar in score:
+            myfile.write(" " + str(bar.pad))
 
 
 def redoBar(pad):
@@ -417,13 +422,17 @@ def shiftElementsRight(pad, change):
     for i in range(current_beat + 1, beats):
         score[current_bar].beats[i].shiftBeat(change)
 
-    score[current_bar].endy = score[current_bar].beats[-1].y + 4
+    score[current_bar].endy = score[current_bar].beats[-1].chords[-1].y + 4
+    # with open("log.txt", "a") as myfile:
+    #     myfile.write("\nChords in the beat: " + str(score[current_bar].beats[current_beat].chords))
+    #     myfile.write("\nChanging bar " + str(current_bar) + "'s endy to " + str(score[current_bar].endy))
+    # myfile.close()
 
     # shift all remaining bars
     for i in range(current_bar + 1, len(score)):
         score[i].shiftBar(change)
 
-    redoAllYs(score)
+    redoAllPads(score)
 
     for i in range(current_bar, len(score)):
         drawBar(i)
@@ -451,6 +460,17 @@ def decLength(pad):
     if nextChord and (nextChord.y < current_chord.y + 4):
         shiftElementsRight(pad, 5 - (nextChord.y - current_chord.y))
         pad.addstr(0, 0, str(nextChord.y))
+
+    # If its the last chord
+    if current_chord.y + 5 > score[current_bar].endy:
+        shiftElementsRight(pad, 5 - (score[current_bar].endy - current_chord.y))
+    
+    # If its not the last bar and the next bar doesn't start where it should 
+    if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
+        with open("log.txt", "a") as myfile:
+            myfile.write("shift")
+        myfile.close()
+        redoAllPads(score)
 
 
     # drawBar(current_bar)
@@ -663,7 +683,7 @@ def horizontalNavigation(pad, dir):
 
             # If the current bar overflows off the screen
             if score[current_bar].endy >= stdscr_width - 3:
-                redoAllYs(score)
+                redoAllPads(score)
                 drawEntireScore(score)
             else:
                 drawBar(newBar)
@@ -877,8 +897,6 @@ def drawBar(barIndex):
         if barIndex == 0:
             Draw.drawBeginning(pad)
 
-        # pad.refresh(0, 0, 1, 1, stave_height, stdscr_width - 2)
-        return
 
 def drawBeat(pad, beat):
 
@@ -891,6 +909,7 @@ def drawBeat(pad, beat):
             drawChord(pad, chord)
 
 def drawEntireScore(score):
+
     for i in range(len(score)):
         drawBar(i)
     
