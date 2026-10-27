@@ -1,4 +1,4 @@
-from Chord import Chord
+from Objects.Chord import Chord
 
 class Beat:
     def __init__(self, y):

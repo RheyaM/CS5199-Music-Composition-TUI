@@ -1,4 +1,4 @@
-from Note import Note
+from Objects.Note import Note
 
 # TODO set rest based on pitch instead?
 class Chord:

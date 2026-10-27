@@ -2,10 +2,10 @@ import curses
 from curses import wrapper
 from curses.textpad import Textbox, rectangle
 
-from Bar import Bar
-from Beat import Beat
-from Chord import Chord
-from Note import Note
+from Objects.Bar import Bar
+from Objects.Beat import Beat
+from Objects.Chord import Chord
+from Objects.Note import Note
 from Draw import Draw
 from Representation import Representation
 

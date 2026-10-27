@@ -1,8 +1,8 @@
 import re
-from Bar import Bar
-import Beat
-from Chord import Chord
-from Note import Note
+from Objects.Bar import Bar
+import Objects.Beat as Beat
+from Objects.Chord import Chord
+from Objects.Note import Note
 import Draw
 
 class Representation:

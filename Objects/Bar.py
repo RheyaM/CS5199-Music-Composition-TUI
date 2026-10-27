@@ -1,5 +1,4 @@
-from Beat import Beat
-from Chord import Chord
+from Objects.Beat import Beat
 class Bar:
     def __init__(self, y, beats):
         # y coord of start of bar
