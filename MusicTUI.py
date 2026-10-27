@@ -10,7 +10,6 @@ from Draw import Draw
 from Representation import Representation
 
 import math
-import time
 
 # TODO: if navigateToNote() always comes after drawChord then just put it in drawChord
 # TODO: be able to display key
@@ -243,8 +242,6 @@ def load(stdscr):
     drawEntireScore(score)
     refreshStavePad()
 
-
-
 def save(stdscr, textbox):
 
     # Writing the stave itself to the .txt file:
@@ -256,14 +253,14 @@ def save(stdscr, textbox):
 
     if file != "":
         with open(file, "a") as myfile:
-            myfile.write("\n" + textbox.instr(0, 0).decode("utf-8"))
+            myfile.write("\n" + textbox.instr(1, 0).decode("utf-8"))
 
         myfile.close()
     else:
         saveAs(stdscr, textbox)
 
-
 def saveAs(stdscr, textbox):
+    open("log.txt", "a").write("\nIn saveAs")
     global file
 
     stdscr.clear()
@@ -279,20 +276,20 @@ def saveAs(stdscr, textbox):
     box.edit()
     text = box.gather()
 
+    open("log.txt", "a").write("\nText is: " + text)
+
     if text != "":
 
         with open(text + ".txt", "a") as myfile:
-            myfile.write(textbox.instr(0, 0).decode("utf-8"))
+            myfile.write(textbox.instr(1, 0).decode("utf-8"))
             
         myfile.close()
-
         file = text + ".txt"
 
     stdscr.clear()
     textinput.erase()
 
     stdscr.refresh()
-
 
 def printAllChords(pad):
     global current_bar
@@ -303,7 +300,6 @@ def printAllChords(pad):
         for chord in beat.chords:
             pad.addstr(0, y, str(chord.y))
             y += 3
-
 
 # TODO: quaver moving to next bar needs whatever is there to split in half??
 # Actually musescore doesn't allow shifting if they're not the same length...
@@ -364,7 +360,6 @@ def shift(pad, dir):
     drawChord(pad, nextChord)
     drawChord(pad, current_chord)
     navigateToNote()
-
 
 # Redo all y values of every bar, beat and chord to get true y values
 # TODO: change this so it only redoes ys from the changed bar. Can be from start oso
@@ -440,23 +435,12 @@ def shiftElementsRight(pad, change):
     for i in range(current_beat + 1, beats):
         score[current_bar].beats[i].shiftBeat(change)
 
-    # If there's another bar in the same pad
-    if current_bar < len(score) - 1 and score[current_bar + 1].pad == score[current_bar].pad:
-        score[current_bar].endy = score[current_bar].beats[-1].chords[-1].y + 4
-        open("log.txt", "a").write("\nAnother bar in pad " + str(score[current_bar].pad)
-                                           + ". Updated bar "+ str(current_bar) + 
-                                           " endy to " + str(score[current_bar].endy))
-
-    # shift all remaining bars
-    # for i in range(current_bar + 1, len(score)):
-    #     score[i].shiftBar(change)
+    score[current_bar].endy += change
 
     redoAllPads(score)
 
     for i in range(current_bar, len(score)):
         drawBar(i)
-
-    pad.addstr(0, 0, str([b.y for b in score]))
 
 def decLength(pad):
     open("log.txt", "a").write("\nIn decLength")
@@ -481,7 +465,6 @@ def decLength(pad):
     if nextChord and (nextChord.y < current_chord.y + 4):
         open("log.txt", "a").write("\nNext chord not far enough from newly created chord")
         shiftElementsRight(pad, 5 - (nextChord.y - current_chord.y))
-        pad.addstr(0, 0, str(nextChord.y))
 
     # If its the last chord
     if current_chord.y + 5 > score[current_bar].endy:
