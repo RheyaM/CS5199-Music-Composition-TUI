@@ -15,8 +15,9 @@ class Representation:
         string = "B:" + str(beats) + "."
         currentLen = 0
 
+        string += "|"
+
         for bar in score:
-            string += "|"
             for beat in bar.beats:
                 for chord in beat.chords:
 
@@ -92,27 +93,32 @@ class Representation:
 
         # While there are still bars to extract
         while len(notes) > 1:
-            char = notes[0]
-            if char == "|":
-                [bar, notes] = Representation.extractBar(notes, beats)
-                score.append(bar)
+            [bar, notes] = Representation.extractBar(notes, beats)
+            print("notes returned after extractBar: " + notes)
+            score.append(bar)
 
         return score
 
-    # Given a substring beginning with |, return the Bar within that
-    # TODO: deal with sharps, flats, naturals
+    # Given a substring beginning with |
+    # Return the first bar extracted, and the remaining substring containing the last |
     def extractBar(substring, beats):
         
-        barregex = re.search("^\|(.*)\|.*", substring)
-        barNotes = barregex.group(1)
+        # barregex = re.search("^\|(.*)\|.*", substring)
+        barNotes = substring[1::]
         bar = Bar(0, beats)
         bar.emptyBar()
+
+        print("barNotes: " + barNotes)
 
         currentBeat = 0
         totalLength = 0
 
-        while len(barNotes) > 0:
+        while len(barNotes) > 1:
+
             ch = barNotes[0]
+
+            if ch == "|":
+                return [bar, barNotes]
 
             if ch == "<":
                 [chord, barNotes] = Representation.extractChord(barNotes)
@@ -145,11 +151,14 @@ class Representation:
             if totalLength == 1 or totalLength == 2 or totalLength == 3:
                 currentBeat = int(currentBeat + totalLength)
                 totalLength = 0
+
+                if currentBeat >= beats:
+                    currentBeat = 0
                 
                 print("Updating currentBeat to: " + str(currentBeat))
 
-        substring = substring[barregex.end(1) ::]
-        return [bar, substring]
+        # substring = substring[barregex.end(1) - 1 ::]
+        return [bar, barNotes]
 
     # Given a substring beginning with a length
     def extractLength(substring):
