@@ -16,6 +16,7 @@ class Representation:
         currentLen = 0
 
         for bar in score:
+            string += "|"
             for beat in bar.beats:
                 for chord in beat.chords:
 
@@ -23,6 +24,8 @@ class Representation:
 
                     for note in chord.notes:
                         notestr += Representation.pitchToNote(note.pitch)
+
+                        print("Note string: " + notestr)
 
                         if note.sharp:
                             notestr += "#"
@@ -35,7 +38,13 @@ class Representation:
                         notestr = "<" + notestr + ">"
 
                     if chord.length != currentLen:
-                        notestr += str(chord.length)
+                        lengthString = str(chord.length)
+                        print("lengthString: " + lengthString)
+
+                        if len(lengthString) > 1:
+                            notestr += lengthString[1::]
+                        else:
+                            notestr += str(chord.length)
                         currentLen = chord.length
 
                     string += notestr
@@ -134,7 +143,7 @@ class Representation:
             bar.beats[currentBeat].addChord(-1, chord)
 
             if totalLength == 1 or totalLength == 2 or totalLength == 3:
-                currentBeat += totalLength
+                currentBeat = int(currentBeat + totalLength)
                 totalLength = 0
                 
                 print("Updating currentBeat to: " + str(currentBeat))
@@ -160,8 +169,9 @@ class Representation:
 
         print("Extracting Octave Indicators: " + substring)
 
-        indicators = re.search("^('+)[.]*", substring)
+        indicators = re.search("^('+).*", substring)
         if indicators:
+            print("Found an octave indicator: " + indicators.group(1))
             number = len(indicators.group(1))
             return [number, substring[indicators.end(1)::]]
 
@@ -185,12 +195,13 @@ class Representation:
         elif note == "r":
             pitch = -1
 
-            return [pitch, substring[1::]]
+            return [pitch, substring]
 
         return [None, substring]
 
 
     def extractNoteAttributes(substring):
+        print("Extracting Note Attributes: " + substring)
         def passFunc(self):
             pass
 
