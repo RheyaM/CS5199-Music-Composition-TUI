@@ -23,14 +23,12 @@ beats = 4
 
 # First bar starts at y = 13 and there are 4 beats in a bar
 score = [Bar(11, beats), Bar(37, beats)]
-pads = []
+pads : list[curses.window] = []
 
 current_bar = 0 # Index of current bar object in score[]
 current_beat = 0 # Index of current beat object in current_bar.beats
-current_chord = None # Chord object
-current_note = None # Note object
-
-cursor_y = 15 # Current cursor position
+current_chord = score[0].beats[0].chords[0] # Chord object
+current_note = current_chord.notes[0] # Note object
 
 # stave_height - going to restrict how many octaves we can use
 stave_height = 13
@@ -42,47 +40,23 @@ stdscr_height = 0
 # TODO: Is it better to transpose with - and +?
 # TODO: draw rests in drawChord() since rests are chords now
 
+
 def main(stdscr):
-    global current_note
-    global current_chord
-    global stdscr_height
     global stdscr_width
-
-    curses.use_default_colors()
-    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_CYAN)
-    curses.init_pair(2, curses.COLOR_WHITE, -1)
-
-    curses.curs_set(0)
-
-    current_chord = score[0].beats[0].chords[0]
-    current_note = current_chord.notes[0]
+    global stdscr_height
     
-    stdscr.clear()
+    setUpTUI(stdscr)
+
     stdscr_height, stdscr_width = stdscr.getmaxyx()
 
-
-    # Creating and adding the stave pad to the screen
-    stave_pad = curses.newpad(15, 300)
-
-    textbox = curses.newpad(3, stdscr_width)
-    textbox.addstr(1, 0, Representation.scoreToString(score, beats))
-    textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
-
-    hints = curses.newpad(3, 300)
-
-    Draw.drawHints(hints, stdscr_width)
-    stdscr.refresh()
-
-    pads.append(stave_pad)
-
-    # Adding the empty stave to the pad
-    drawEntireScore(score)
-
-    navigateToNote()
-    stave_pad.refresh(0, 0, 1, 1, stave_height, stdscr_width - 2)
+    textbox = setUpTextbox()
+    hints = setUpHints()
+    stave_pad = getCurrentPad()
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
+    stave_pad.refresh(0, 0, 1, 1, stave_height, stdscr_width - 2)
+
 
     # textinput = curses.newwin(2, 41, 15, 1)
     # box = Textbox(textinput)
@@ -106,7 +80,6 @@ def main(stdscr):
 
         char = stdscr.getkey()
 
-        stave_pad = getCurrentPad()
 
         match char:
             case "q":
@@ -199,10 +172,46 @@ def main(stdscr):
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
         x = refreshStavePad()
+        stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
 
+def setUpTUI(stdscr: curses.window) -> None:
+    global current_chord
+    global current_note
+    global stdscr_height
+    global stdscr_width
 
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_CYAN)
+    curses.init_pair(2, curses.COLOR_WHITE, -1)
+    curses.curs_set(0)
+
+    stdscr.clear()
+    
+    # Creating and adding the first stave pad to the screen
+    stave_pad = curses.newpad(15, 300)
+
+    stdscr.refresh()
+    pads.append(stave_pad)
+    
+    # Adding the empty stave to the pad
+    drawEntireScore(score)
+    navigateToNote()
+    
+
+
+def setUpTextbox() -> curses.window:
+    textbox = curses.newpad(3, stdscr_width)
+    textbox.addstr(1, 0, Representation.scoreToString(score, beats))
+
+    return textbox
+
+def setUpHints() -> curses.window:
+    hints = curses.newpad(3, 300)
+    Draw.drawHints(hints, stdscr_width)
+    
+    return hints
 
 def refreshStavePad():
     x = 1
@@ -386,11 +395,6 @@ def redoAllPads(score):
         currentPad = bar.pad
         end_y = bar.endy
 
-    yList = [b.y for b in score]
-    open("log.txt", "a").write("\nyList after redoAllPads: " + str(yList))
-    endyList = [b.endy for b in score]
-    open("log.txt", "a").write("\nendyList after: " + str(endyList))
-
 
 def redoBar(pad):
     open("log.txt", "a").write("\nIn redoBar()")
@@ -551,6 +555,7 @@ def getCurrentPad():
     return pads[score[current_bar].pad]
 
 def getCurrentCoords():
+    open("log.txt", "a").write("\n564")
     return [current_note.pitch, current_chord.y]
 
 def toggleStaccato(pad):
@@ -729,8 +734,9 @@ def transpose(direction, stave_pad, change):
         drawChord(stave_pad, current_chord)
         navigateToNote()
 
-# Get the coordinate of the currently selected note
+# Get the coordinates of the currently selected note
 def getCurrentCoords():
+    open("log.txt", "a").write("\n744")
     global current_note
     global current_chord
 

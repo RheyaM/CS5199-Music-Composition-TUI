@@ -26,8 +26,6 @@ class Representation:
                     for note in chord.notes:
                         notestr += Representation.pitchToNote(note.pitch)
 
-                        print("Note string: " + notestr)
-
                         if note.sharp:
                             notestr += "#"
                         elif note.flat:
@@ -40,7 +38,6 @@ class Representation:
 
                     if chord.length != currentLen:
                         lengthString = str(chord.length)
-                        print("lengthString: " + lengthString)
 
                         if len(lengthString) > 1:
                             notestr += lengthString[1::]
