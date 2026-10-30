@@ -69,6 +69,7 @@ class Chord:
 
         newChord.staccato = self.staccato
         newChord.accent = self.accent
+        newChord.rest = self.rest
 
         return newChord
 

@@ -100,6 +100,7 @@ def main(stdscr):
     #     stave_pad.refresh(0, 0, 1, 1, stave_height, stave_width + 2)
     #     stdscr.refresh(◖)
 
+    open("keylog.txt", "a").write("\n#####################################")
 
     while True:
 
@@ -199,6 +200,9 @@ def main(stdscr):
 
         x = refreshStavePad()
 
+        open("keylog.txt", "a").write("\n" + char)
+
+
 
 def refreshStavePad():
     x = 1
@@ -276,14 +280,7 @@ def saveAs(stdscr, textbox):
     box.edit()
     text = box.gather()
 
-    open("log.txt", "a").write("\nText is: " + text)
-
     if text != "":
-
-        with open(text + ".txt", "a") as myfile:
-            myfile.write(textbox.instr(1, 0).decode("utf-8"))
-            
-        myfile.close()
         file = text + ".txt"
 
     stdscr.clear()
@@ -365,6 +362,7 @@ def shift(pad, dir):
 # TODO: change this so it only redoes ys from the changed bar. Can be from start oso
 def redoAllPads(score):
     global pads
+    open("log.txt", "a").write("\nredoAllPads()")
 
     end_y = 11
     currentPad = 0
@@ -372,41 +370,31 @@ def redoAllPads(score):
     for bar in score:
 
         # If the bar doesn't start where the previous ended, shift it left/right
-        
-        # This must check that theyre acc in the same pad tho...
         if bar.y != end_y and bar.pad == currentPad:
-            open("log.txt", "a").write("\nBar " + str(score.index(bar)) + " didn't start where previous ended. Shifted by " + str(end_y) + " - " + str(bar.y))
             bar.shiftBar(end_y - bar.y)
             
 
         # If the bar is overflowing, update its pad, y, and endy values
         if bar.endy >= stdscr_width - 3:
-            with open("log.txt", "a") as myfile:
-                myfile.write("\nOverflow at bar " + str(score.index(bar)) + ". endy is " + str(bar.endy))
-            myfile.close()
-
             bar.pad += 1
             bar.shiftBar(bar.y * -1)
 
             if bar.pad >= len(pads):
                 pads.append(curses.newpad(14, 300))
 
-            with open("log.txt", "a") as myfile:
-                myfile.write("\nBar " + str(score.index(bar)) + "'s y: " + str(bar.y))
-                myfile.write("\nBar " + str(score.index(bar)) + "'s endy: " + str(bar.endy))
-            myfile.close()
 
         currentPad = bar.pad
         end_y = bar.endy
 
-    padlist = [bar.pad for bar in score]
-    with open("log.txt", "a") as myfile:
-        myfile.write("\n")
-        myfile.write(str(padlist))
-    myfile.close()
+    yList = [b.y for b in score]
+    open("log.txt", "a").write("\nyList after redoAllPads: " + str(yList))
+    endyList = [b.endy for b in score]
+    open("log.txt", "a").write("\nendyList after: " + str(endyList))
 
 
 def redoBar(pad):
+    open("log.txt", "a").write("\nIn redoBar()")
+
     endy = score[current_bar].redoY()
     bar = current_bar + 1
 
@@ -443,12 +431,15 @@ def shiftElementsRight(pad, change):
         drawBar(i)
 
 def decLength(pad):
-    open("log.txt", "a").write("\nIn decLength")
     global current_chord
     global current_note
     global current_beat
-    
 
+    open("log.txt", "a").write("\n" + str(current_chord.length))
+
+    if current_chord.length <= 0.0625:
+        return
+    
     if current_chord.length == 4 or current_chord.length == 3:
         current_chord.length -= 1
     else:
@@ -484,6 +475,8 @@ def decLength(pad):
 def incLength():
     global current_chord
 
+    open("log.txt", "a").write("\nIn incLength()")
+
     if current_chord.length == 2 or current_chord.length == 3:
         current_chord.length += 1
         overrideChords(1)
@@ -491,14 +484,16 @@ def incLength():
     else:
         overrideChords(current_chord.length)
         current_chord.length *= 2
-    
-    drawBar(current_bar)
+
+    redoAllPads(score)
+    drawBarsFrom(current_bar)
     navigateToNote()
 
 
 # A chord has been doubled (current_chord)
 # Delete next chords
 def overrideChords(space):
+    open("log.txt", "a").write("\nIn overrideChords()")
 
     nextChord = getCurrentBeat().getNextChord(current_chord)
 
@@ -508,6 +503,7 @@ def overrideChords(space):
         space -= nextChord.length
         temp = getCurrentBeat().getNextChord(nextChord)
 
+        # If chords within the current beat can be deleted:
         if space >= 0:
             getCurrentBeat().deleteChord(nextChord)
 
@@ -518,13 +514,12 @@ def overrideChords(space):
 
             index = getCurrentBeat().getChordIndex(current_chord)
             getCurrentBeat().addChord(index + 1, remainderChord)
-
+            
         nextChord = temp
 
     nextBeat = score[current_bar].getNextBeat(getCurrentBeat())
 
     # If there are still chords to delete, move on to the next Beats
-    # TODO: what if its eating 1 of a note thats length 2? Beat after will have to contend w that
     while space > 0 and nextBeat:
 
         while nextBeat.empty:
@@ -803,6 +798,8 @@ def drawChord(pad, chord):
             else:
                 string = "\u26AA"
 
+            open("log.txt", "a").write("\nnote.pitch: " + str(note.pitch) + ", y: " + str(y))
+
             pad.addstr(note.pitch, y, string, curses.color_pair(2))
             Draw.drawAttributes(pad, note, chord)
 
@@ -865,6 +862,10 @@ def drawChordAttributes(pad, chord, lastNote, dir):
     if chord.accent:
         pad.addstr(current_coord, chord.y, ">")
 
+def drawBarsFrom(barIndex):
+    for i in range(barIndex, len(score)):
+        drawBar(i)
+
 def drawBar(barIndex):
         global pads
 
@@ -874,7 +875,7 @@ def drawBar(barIndex):
         start_y = bar.y
         end_y = bar.endy
 
-        length = end_y - start_y + 1
+        length = end_y - start_y - 1
 
         for i in range(0, 13):
             pad.addstr(i, start_y, " " * (length + 2))
@@ -900,7 +901,8 @@ def drawBar(barIndex):
         if barIndex == 0:
             Draw.drawBeginning(pad)
 
-        if barIndex < len(score) - 1 and score[barIndex + 1].pad > score[barIndex].pad:
+        # If a bar is the last on its pad, or the last in score, remove any further characters
+        if (barIndex < len(score) - 1 and score[barIndex + 1].pad > score[barIndex].pad) or barIndex == len(score) - 1:
             [height, width] = pad.getmaxyx()
             for i in range(height):
                 pad.move(i, end_y + 3)
