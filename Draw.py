@@ -1,6 +1,8 @@
 import curses
 import math
 
+from Objects.Chord import Chord
+
 class Draw:
 
     hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes" , "Opt-Up/Down": "transpose by 1", 
@@ -64,6 +66,24 @@ class Draw:
 
         elif chord.length == 4:
             pad.addstr(5, y, "▃▃")
+
+    def drawNotes(pad : curses.window, chord : Chord) -> list[int]:
+        notes = chord.notes
+        y = chord.y
+        noteCoords = []
+
+        for note in notes:
+                    
+            noteCoords.append(note.pitch)
+            if chord.length >= 2:
+                string = "❨❩"
+            else:
+                string = "\u26AA"
+
+            pad.addstr(note.pitch, y, string, curses.color_pair(2))
+            Draw.drawAttributes(pad, note, chord)
+
+        return noteCoords
 
     def drawAttributes(pad, note, chord):
         x = note.pitch

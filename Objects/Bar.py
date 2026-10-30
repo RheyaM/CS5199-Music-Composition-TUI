@@ -13,7 +13,6 @@ class Bar:
             self.beats.append(Beat(current_y))
             current_y = current_y + 6
 
-        # x, y = top left corner of Bar
         self.pad = 0
 
     def shiftBar(self, change):
@@ -23,7 +22,8 @@ class Bar:
         for beat in self.beats:
             beat.shiftBeat(change)
 
-
+    # Takes a Beat object and returns the next one in the Bar
+    # Returns the Beat object regardless of if its empty
     def getNextBeat(self, beat):
         index = self.beats.index(beat)
 
@@ -33,28 +33,30 @@ class Bar:
             return None
 
     # Get the next chord, regardless of which beat it is in
-    # If a beat is empty, skips it
-    # TODO: refactor getNext and getPrev into one/smaller functions?
-    def getNextChord(self, beat, chord):
+    # Skips empty beats
+    def getNextChord(self, beat : int, chord):
 
-        # If there's another chord in the bar
+        # get the next chord in the current beat
         withinBeat = self.beats[beat].getNextChord(chord)
 
+        # If there was another chord in the current beat
         if withinBeat:
             return [beat, withinBeat]
 
-        # Look for the next beat
+        # Else, look at the next beat
         else:
             temp = beat + 1
             while temp <= len(self.beats) - 1:
-                if len(self.beats[temp].chords) > 0:
+                if not self.beats[temp].empty:
                     return [temp, self.beats[temp].chords[0]]
                 temp += 1
 
         # None implies there are no more beats in the bar, hence no more chords
         return [beat, None]
 
-    def getPrevChord(self, beat, chord):
+    # Get the previous chord, regardless of which beat it's in
+    # Skips empty beats
+    def getPrevChord(self, beat : int, chord):
 
         withinBeat = self.beats[beat].getPrevChord(chord)
 
@@ -65,7 +67,7 @@ class Bar:
         else:
             temp = beat - 1
             while temp >= 0:
-                if len(self.beats[temp].chords) > 0:
+                if not self.beats[temp].empty:
                     return [temp, self.beats[temp].chords[-1]]
                 temp -= 1
 
@@ -112,7 +114,14 @@ class Bar:
             beat.chords = []
             beat.empty = True
 
-        
+    # Returns the beat index and chord object of the last chord in the Bar
+    def getLastChord(self):
+        index = len(self.beats) - 1
+        while self.beats[index].empty:
+            index -= 1
+
+        return [index, self.beats[index].chords[-1]]
+
 
             
                 
