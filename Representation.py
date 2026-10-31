@@ -39,10 +39,10 @@ class Representation:
                     if chord.length != currentLen:
                         lengthString = str(chord.length)
 
-                        if len(lengthString) > 1:
+                        if chord.length < 1 and len(lengthString) > 1:
                             notestr += lengthString[1::]
                         else:
-                            notestr += str(chord.length)
+                            notestr += str(int(chord.length))
                         currentLen = chord.length
 
                     string += notestr

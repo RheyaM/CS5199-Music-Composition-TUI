@@ -65,7 +65,7 @@ class Draw:
             pad.addstr(5, y, "▀▀")
 
         elif chord.length == 4:
-            pad.addstr(5, y, "▃▃")
+            pad.addstr(3, y, "▃▃")
 
     def drawNotes(pad : curses.window, chord : Chord) -> list[int]:
         notes = chord.notes
