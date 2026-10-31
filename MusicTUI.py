@@ -146,6 +146,7 @@ def main(stdscr : curses.window) -> None:
                 else:
                     stave_pad.addstr(0, 0, char)
 
+
         textbox.clear()
         textbox.addstr(1, 0, Representation.scoreToString(score, beats))
         textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
@@ -365,8 +366,6 @@ def decLength(pad):
     global current_chord
     global current_note
 
-    open("log.txt", "a").write("\n" + str(current_chord.length))
-
     bar = score[current_bar]
 
     if current_chord.length <= 0.0625:
@@ -461,18 +460,11 @@ def overrideChords(barIndex : int, chord, space : float):
                 remainderChord = nextChord.duplicateChord()
                 remainderChord.length = abs(space)
 
-                score[nextBar].chords.insert(index + 1)
+                # TODO: remainder chord could be like 0.75. then what
 
-            
+                score[nextBar].chords.insert(index + 1, remainderChord)
 
-            # within the bar, cut chord - insert remainder chord DONE
-            # within the bar, eat entirely - nothing more to do DONE
-            # outwith bar, eat entirely - insert newChord length space DONE
-            # outwith bar, cut chord - insert newChord length space, insert remainder chord
-
-
-        # score[barIndex].redoY()
-
+    # score[current_bar].redoY()
 
 def getCurrentPad():
     return pads[score[current_bar].pad]
@@ -520,6 +512,7 @@ def navigateAwayFrom():
 
     if x == -1 or x == None:
         for i in range(4, 8):
+            
             pad.chgat(i, y, 1, curses.color_pair(2))
     else:
         if current_chord.length >= 2:
@@ -531,12 +524,13 @@ def navigateToNote():
 
     pad = getCurrentPad()
     [x, y] = getCurrentCoords()
-    if x:
+
+    if x is not None:
         if x != -1:
             if current_chord.length >= 2:
                 pad.chgat(x, y, 2, curses.color_pair(1))
             else:
-                pad.chgat(x, y, 2, curses.color_pair(1))
+                pad.chgat(x, y, 1, curses.color_pair(1))
         else:
             for i in range(4, 8):
                 pad.chgat(i, y, 1, curses.color_pair(1))

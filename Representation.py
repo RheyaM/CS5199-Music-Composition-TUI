@@ -66,8 +66,14 @@ class Representation:
             while pitch < 5:
                 pitch += 7
                 dir += 1
+                char = "'"
 
-            note = pitch_dict[pitch] + ("'" * dir)
+            while pitch > 11:
+                pitch -= 7
+                dir += 1
+                char = ","
+
+            note = pitch_dict[pitch] + (char * dir)
 
             return note
 
