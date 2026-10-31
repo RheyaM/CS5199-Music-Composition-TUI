@@ -18,34 +18,33 @@ class Representation:
         string += "|"
 
         for bar in score:
-            for beat in bar.beats:
-                for chord in beat.chords:
+            for chord in bar.chords:
 
-                    notestr = ""
+                notestr = ""
 
-                    for note in chord.notes:
-                        notestr += Representation.pitchToNote(note.pitch)
+                for note in chord.notes:
+                    notestr += Representation.pitchToNote(note.pitch)
 
-                        if note.sharp:
-                            notestr += "#"
-                        elif note.flat:
-                            notestr += "-"
-                        elif note.natural:
-                            notestr += "n"
+                    if note.sharp:
+                        notestr += "#"
+                    elif note.flat:
+                        notestr += "-"
+                    elif note.natural:
+                        notestr += "n"
 
-                    if len(chord.notes) > 1:
-                        notestr = "<" + notestr + ">"
+                if len(chord.notes) > 1:
+                    notestr = "<" + notestr + ">"
 
-                    if chord.length != currentLen:
-                        lengthString = str(chord.length)
+                if chord.length != currentLen:
+                    lengthString = str(chord.length)
 
-                        if chord.length < 1 and len(lengthString) > 1:
-                            notestr += lengthString[1::]
-                        else:
-                            notestr += str(int(chord.length))
-                        currentLen = chord.length
+                    if chord.length < 1 and len(lengthString) > 1:
+                        notestr += lengthString[1::]
+                    else:
+                        notestr += str(int(chord.length))
+                    currentLen = chord.length
 
-                    string += notestr
+                string += notestr
             
             string += "|"
 
