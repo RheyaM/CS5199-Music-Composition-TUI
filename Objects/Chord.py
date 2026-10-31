@@ -10,6 +10,8 @@ class Chord:
         self.accent = False
         self.rest = rest
 
+        self.tie = False
+
     def addNote(self, pitch):
         if self.rest:
             self.notes = []
