@@ -126,7 +126,7 @@ def main(stdscr : curses.window) -> None:
                 saveAs(stdscr, textbox)
 
             case "p":
-                refreshStavePad()
+                Draw.drawTie(stave_pad, current_chord)
 
             case "l" | "L":
                 load(stdscr)
@@ -366,6 +366,10 @@ def decLength(pad):
     global current_chord
     global current_note
 
+    # Do not decrease the length of a tied chord
+    if current_chord.tie:
+        return
+
     bar = score[current_bar]
 
     if current_chord.length <= 0.0625:
@@ -401,12 +405,13 @@ def incLength():
 
     # If it will form a tie, the length shouldn't change
     index = score[current_bar].chords.index(current_chord)
-    
-    if current_chord.length == 4:
-        # TODO: introduce ties for this
+
+    # If the current chord is tied to the next, any change to length should be done to the last chord
+    # (For now)
+    if current_chord.tie:
         return
 
-    if current_chord.length == 2 or current_chord.length == 3:
+    if current_chord.length == 2 or current_chord.length == 3 or current_chord.length == 4:
         if index != len(score[current_bar].chords) - 1:
             current_chord.length += 1
         overrideChords(current_bar, current_chord, 1)
@@ -426,7 +431,6 @@ def incLength():
 # overrideChords should be: starting from this chord (don't incl it), eat this much space.
 # space <= 1, always
 def overrideChords(barIndex : int, chord, space : float):
-    open("log.txt", "a").write("\nIn overrideChords(" + str(barIndex)+", " + str(space))
 
     while space > 0:
         [nextBar, nextChord] = moveRight(barIndex, chord)
@@ -434,13 +438,13 @@ def overrideChords(barIndex : int, chord, space : float):
 
         # If there is no next chord to eat, create a newBar
         if nextChord is None:
-            open("log.txt", "a").write("\nb")
             newBar = Bar(score[-1].endy, beats)
             score.append(newBar)
 
-            # First note of the bar should be
-            newChord = Chord(-1, space, newBar.chords[0].y)
-            newChord.notes = chord.notes
+            newChord = chord.duplicateChord()
+            newChord.length = space
+            newChord.y = newBar.chords[0].y
+
             newBar.chords.insert(0, newChord)
 
             overrideChords(len(score) - 1, newChord, newChord.length)
@@ -450,22 +454,22 @@ def overrideChords(barIndex : int, chord, space : float):
 
         # There is another chord to eat, within the bar or in the next one
         else:
-            open("log.txt", "a").write("\nc")
             
             if barIndex != nextBar:
-                open("log.txt", "a").write("\nd")
 
-                # add the tied chord to beginning of nextBar
-                newChord = Chord(-1, space, score[nextBar].chords[0].y)
-                newChord.notes = chord.notes
+                newChord = chord.duplicateChord()
+                newChord.length = space
+                newChord.y = score[nextBar].chords[0].y
+
                 score[nextBar].chords.insert(0, newChord)
+
+                chord.tie = True
 
             score[nextBar].chords.remove(nextChord)
             space -= nextChord.length
 
             # Chord eaten, and it needs a remainder
             if space < 0:
-                open("log.txt", "a").write("\ne")
 
                 remainderChord = nextChord.duplicateChord()
                 remainderChord.length = abs(space)
@@ -503,7 +507,6 @@ def splitChord(chord : Chord) -> list[Chord]:
         chords.append(newChord)
 
     return chords
-
 
 
 def getCurrentPad():
@@ -561,6 +564,7 @@ def navigateAwayFrom():
             pad.chgat(x, y, 2, curses.color_pair(2))    
 
 def navigateToNote():
+    open("log.txt", "a").write("\nIn navigateToNote()")
 
     pad = getCurrentPad()
     [x, y] = getCurrentCoords()
@@ -702,14 +706,21 @@ def getCurrentCoords():
     return [x, y]
 
 def removeNote(pad):
+    
     global current_chord
     global current_note
 
     if not current_chord.rest:
         current_note = current_chord.removeNote(current_note)
+        
         drawChord(pad, current_chord)
 
-        navigateToNote()
+        if current_chord.rest:
+            [prevBar, prevChord] = moveLeft(current_bar, current_chord)
+            if prevChord:
+                prevChord.tie = False
+
+        navigateToNote()    
 
 def parseNote(stave_pad, note):
     global current_chord
@@ -818,9 +829,15 @@ def drawChordAttributes(pad, chord, lastNote, dir):
     if chord.accent:
         pad.addstr(current_coord, chord.y, ">")
 
+
 def drawBarsFrom(barIndex):
     for i in range(barIndex, len(score)):
         drawBar(i)
+
+    for bar in score:
+        for chord in bar.chords:
+            if chord.tie:
+                Draw.drawTie(pads[bar.pad], chord)
 
 def drawBar(barIndex):
 
@@ -862,5 +879,10 @@ def drawBar(barIndex):
 def drawEntireScore():
     for i in range(len(score)):
         drawBar(i)
+
+    for bar in score:
+        for chord in bar.chords:
+            if chord.tie:
+                Draw.drawTie(pads[bar.pad], chord)
     
 wrapper(main)
