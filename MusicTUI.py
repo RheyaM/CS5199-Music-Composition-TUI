@@ -586,7 +586,7 @@ def navigateToNote():
 
     pad = getCurrentPad()
     [x, y] = getCurrentCoords()
-    if x:
+    if x is not None:
         if x != -1:
             if current_chord.length >= 2:
                 pad.chgat(x, y, 2, curses.color_pair(1))
