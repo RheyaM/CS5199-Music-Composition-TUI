@@ -99,7 +99,27 @@ class Draw:
         if chord.length == 3:
             pad.addstr(x, y+2, "•")
 
-    
+    def drawTie(pad, chord):
+        y = chord.y
+        x = chord.notes[-1].pitch
+
+        linex = x + 1 if x > 5 else x - 1
+        chars = ["\\", "_",  "/"] if x > 5 else ["/", "▔",  "\\"]
+        pad.addstr(linex, y + 1, chars[0])
+        y += 1
+        
+        above = pad.instr(x, y + 1, 3).decode("utf-8")
+        open("log.txt", "a").write("\n" + above)
+
+
+        while above != "❨" and above != "⚪":
+            open("log.txt", "a").write("\nj" + str(above))
+            pad.addstr(linex, y + 1, chars[1])
+            y += 1
+            above = pad.instr(x, y + 1, 3).decode("utf-8")
+            
+        pad.addstr(linex, y, chars[1] + chars[2])
+            
 
     def emptyStaveRegion(pad, y):
         for x in range (1, 10, 2):

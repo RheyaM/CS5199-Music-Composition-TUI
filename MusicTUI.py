@@ -26,8 +26,7 @@ score = [Bar(11, beats), Bar(37, beats)]
 pads : list[curses.window] = []
 
 current_bar : int = 0 # Index of current bar object in score[]
-current_beat : int = 0 # Index of current beat object in current_bar.beats
-current_chord : Chord = score[0].beats[0].chords[0] # Chord object
+current_chord : Chord = score[0].chords[0] # Chord object
 current_note : Note = current_chord.notes[0] # Note object
 
 # stave_height - going to restrict how many octaves we can use
@@ -44,10 +43,10 @@ stdscr_height : int = 0
 def main(stdscr : curses.window) -> None:
     global stdscr_width
     global stdscr_height
-    
-    setUpTUI(stdscr)
 
     stdscr_height, stdscr_width = stdscr.getmaxyx()
+    
+    setUpTUI(stdscr)
 
     textbox = setUpTextbox()
     hints = setUpHints()
@@ -127,7 +126,7 @@ def main(stdscr : curses.window) -> None:
                 saveAs(stdscr, textbox)
 
             case "p":
-                refreshStavePad()
+                Draw.drawTie(stave_pad, current_chord)
 
             case "l" | "L":
                 load(stdscr)
@@ -146,6 +145,7 @@ def main(stdscr : curses.window) -> None:
 
                 else:
                     stave_pad.addstr(0, 0, char)
+
 
         textbox.clear()
         textbox.addstr(1, 0, Representation.scoreToString(score, beats))
@@ -283,56 +283,38 @@ def shift(pad, dir):
     global current_chord
     global current_note
 
+    bar = score[current_bar]
+
+    index = bar.chords.index(current_chord)
+
     if dir == "Right":
-        [beat, nextChord] = score[current_bar].getNextChord(current_beat, current_chord)
-        change = 1
+        [newBar, toSwitch] = moveRight(current_bar, current_chord)
     else:
-        [beat, nextChord] = score[current_bar].getPrevChord(current_beat, current_chord)
-        change = -1
+        [newBar, toSwitch] = moveLeft(current_bar, current_chord)
 
-    # If there isn't another chord in the current bar
-    if nextChord is None:
-        nextBar = current_bar + change
-        if nextBar < len(score) and nextBar >= 0:
+    # If there is a next/previous chord (regardless of bar)
+    if toSwitch:
 
-            if dir == "Right":
-                beat = 0 
-            else:
-                beat = -1
-
-            nextChord = score[nextBar].beats[beat].chords[beat]
-
-            if nextChord.length != current_chord.length:
-                return
-
-        else:
+        # They must be the same length
+        if toSwitch.length != current_chord.length:
             return
 
-    else:
-        nextBar = current_bar
-    
-    current_beat_obj = getCurrentBeat()
-    next_beat_obj = score[nextBar].beats[beat]
+        newIndex = score[newBar].chords.index(toSwitch)
 
-    nextIndex = next_beat_obj.getChordIndex(nextChord)
-    currentIndex = current_beat_obj.getChordIndex(current_chord)
+        score[current_bar].chords[index] = toSwitch
+        score[newBar].chords[newIndex] = current_chord
 
-    # Switching the chords
-    next_beat_obj.chords[nextIndex] = current_chord
-    current_beat_obj.chords[currentIndex] = nextChord
 
-    # Updating the y coordinates of the relevant chords
-    temp = current_chord.y
-    current_chord.y = nextChord.y
-    nextChord.y = temp
+        # Updating the y coordinates of the relevant chords
+        temp = current_chord.y
+        current_chord.y = toSwitch.y
+        toSwitch.y = temp
 
-    
-    current_bar = nextBar
-    current_beat = beat if beat != -1 else len(score[current_bar].beats) - 1
+        current_bar = newBar
 
-    drawChord(pad, nextChord)
-    drawChord(pad, current_chord)
-    navigateToNote()
+        drawChord(pad, toSwitch)
+        drawChord(pad, current_chord)
+        navigateToNote()
 
 # Redo all y values of every bar, beat and chord to get true y values
 # TODO: change this so it only redoes ys from the changed bar. Which could be the start
@@ -367,15 +349,11 @@ def shiftElementsRight(pad, change):
     global current_chord
     global current_bar
 
-    beat = getCurrentBeat()
+    bar = score[current_bar]
 
-    index = beat.getChordIndex(current_chord)
-    for chordIndex in range(index + 1, len(getCurrentBeat().chords)):
-        beat.chords[chordIndex].shiftChord(change)
-
-    # shift all remaining beats in current bar
-    for i in range(current_beat + 1, beats):
-        score[current_bar].beats[i].shiftBeat(change)
+    index = bar.chords.index(current_chord)
+    for chordIndex in range(index + 1, len(bar.chords)):
+        bar.chords[chordIndex].shiftChord(change)
 
     score[current_bar].endy += change
 
@@ -387,41 +365,34 @@ def shiftElementsRight(pad, change):
 def decLength(pad):
     global current_chord
     global current_note
-    global current_beat
 
-    open("log.txt", "a").write("\n" + str(current_chord.length))
+    # Do not decrease the length of a tied chord
+    if current_chord.tie:
+        return
+
+    bar = score[current_bar]
 
     if current_chord.length <= 0.0625:
         return
-    
-    if current_chord.length == 4 or current_chord.length == 3:
-        current_chord.length -= 1
-    else:
-        current_chord.length /= 2
 
     # Current chord is the newly created half note
-    current_chord = getCurrentBeat().halfChord(current_chord)
+    current_chord = bar.halfChord(current_chord)
     current_note = current_chord.notes[0]
 
     # get the next chord in the bar
-    [beat, nextChord] = score[current_bar].getNextChord(current_beat, current_chord)
+    nextChord = score[current_bar].getNextChord(current_chord)
 
     # If the next chord is not far enough from the newly created current chord, shift it along
     if nextChord and (nextChord.y < current_chord.y + 4):
-        open("log.txt", "a").write("\nNext chord not far enough from newly created chord")
         shiftElementsRight(pad, 5 - (nextChord.y - current_chord.y))
 
-    # If its the last chord
+    # If its the last chord and overtook the end of the bar
     if current_chord.y + 5 > score[current_bar].endy:
-        open("log.txt", "a").write("\nOvertook bar end")
         shiftElementsRight(pad, 5 - (score[current_bar].endy - current_chord.y))
     
     # If its not the last bar and the next bar doesn't start where it should 
     if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
-        open("log.txt", "a").write("\nNext bar doesn't start where it should")
         redoAllPads(score)
-
-    open("log.txt", "a").write(str([b.chords for b in score[current_bar].beats]))
 
     # drawBar(current_bar)
     drawEntireScore()
@@ -432,102 +403,111 @@ def incLength():
 
     open("log.txt", "a").write("\nIn incLength()")
 
-    if current_chord.length == 4:
-        # TODO: introduce ties
+    # If it will form a tie, the length shouldn't change
+    index = score[current_bar].chords.index(current_chord)
+
+    # If the current chord is tied to the next, any change to length should be done to the last chord
+    # (For now)
+    if current_chord.tie:
         return
 
-    if current_chord.length == 2 or current_chord.length == 3:
-        current_chord.length += 1
-        overrideChords(1)
+    if current_chord.length == 2 or current_chord.length == 3 or current_chord.length == 4:
+        if index != len(score[current_bar].chords) - 1:
+            current_chord.length += 1
+        overrideChords(current_bar, current_chord, 1)
         
     else:
-        overrideChords(current_chord.length)
-        current_chord.length *= 2
-
+        length = current_chord.length
+        # If it's not the last chord in the bar, increase the length
+        if index != len(score[current_bar].chords) - 1:
+            current_chord.length *= 2
+            
+        overrideChords(current_bar, current_chord, length)
+        
     redoAllPads(score)
     drawBarsFrom(current_bar)
     navigateToNote()
 
+# overrideChords should be: starting from this chord (don't incl it), eat this much space.
+# space <= 1, always
+def overrideChords(barIndex : int, chord, space : float):
 
-def overrideChords2(barIndex, beatIndex, chord, space):
+    while space > 0:
+        [nextBar, nextChord] = moveRight(barIndex, chord)
+        index = score[barIndex].chords.index(chord)
 
-    # Flow: get next chord (could be any bar...). minus nextChord.length from space.
-    # If next bar: it should be a new chord in first beat. eat whatevers there, but don't delete. Replace
-    # If space >= 0, just delete the chord. The remainder chords stay untouched within their beat.
-    # If space < 0, get remainder. Chord needs to get shortened atp. But could be shortened from 1 -> 0.5.
-    # Or could be shortened from 2 -> 1. At least we know always half step...
+        # If there is no next chord to eat, create a newBar
+        if nextChord is None:
+            newBar = Bar(score[-1].endy, beats)
+            score.append(newBar)
 
-    # *I have Beat.totalLength to check total length of chords in a beat. which will be any int 0 (empty) to 4.
+            newChord = chord.duplicateChord()
+            newChord.length = space
+            newChord.y = newBar.chords[0].y
 
-    [nextBar, nextBeat, nextChord] = moveRight(barIndex, beatIndex, chord)
+            newBar.chords.insert(0, newChord)
 
-    if nextBar > barIndex:
-        # chord becomes tie
-        # add chord to first 
-        # overrideChords from nextChord and remainder space
-        pass
+            overrideChords(len(score) - 1, newChord, newChord.length)
 
-    while space > 0 and nextChord:
-        space -= nextChord.length
+            chord.tie = True
+            space = 0
 
-# current_chord has been doubled
-# Delete next chords
-def overrideChords(space):
-    open("log.txt", "a").write("\nIn overrideChords()")
-
-    nextChord = getCurrentBeat().getNextChord(current_chord)
-
-    # If chords within the current beat can be deleted:
-    while space > 0 and nextChord:
-    
-        space -= nextChord.length
-        temp = getCurrentBeat().getNextChord(nextChord)
-
-        # If chords within the current beat can be deleted:
-        if space >= 0:
-            getCurrentBeat().deleteChord(nextChord)
-
-        # If the chord deleted was too large (needs to get shortened)
+        # There is another chord to eat, within the bar or in the next one
         else:
-            remainderChord = nextChord.duplicateChord()
-            remainderChord.length = abs(space)
-
-            index = getCurrentBeat().getChordIndex(current_chord)
-            getCurrentBeat().addChord(index + 1, remainderChord)
             
-        nextChord = temp
+            if barIndex != nextBar:
 
-    nextBeat = score[current_bar].getNextBeat(getCurrentBeat())
+                newChord = chord.duplicateChord()
+                newChord.length = space
+                newChord.y = score[nextBar].chords[0].y
 
-    # If there are still chords to delete, move on to the next Beats
-    while space > 0 and nextBeat:
+                score[nextBar].chords.insert(0, newChord)
 
-        while nextBeat.empty:
-            nextBeat = score[current_bar].getNextBeat(nextBeat)
+                chord.tie = True
 
-        nextChord = nextBeat.chords[0]
-
-        while space > 0 and nextChord:
+            score[nextBar].chords.remove(nextChord)
             space -= nextChord.length
-            temp = nextBeat.getNextChord(nextChord)
 
-            if space >= 0:
-                nextBeat.deleteChord(nextChord)
+            # Chord eaten, and it needs a remainder
+            if space < 0:
 
-            else:
                 remainderChord = nextChord.duplicateChord()
                 remainderChord.length = abs(space)
-                
-                nextBeat.addChord(0, remainderChord)
 
-            nextChord = temp
+                chordsToAdd = splitChord(remainderChord)
+                for c in chordsToAdd:
+                    score[nextBar].chords.insert(index + 1, c)
 
-        nextBeat = score[current_bar].getNextBeat(getCurrentBeat())
+                score[nextBar].redoY()
 
 
-    open("log.txt", "a").write(str([b.chords for b in score[current_bar].beats]))
-    # TODO: if space still >0 and no more beats in bar, move onto next Bar
-    # TODO: refactor all the duplicated code together (using Bar.py's getNextChord() i think)
+def splitChord(chord : Chord) -> list[Chord]:
+    chords = []
+    length = chord.length
+
+    if length == 1 or length == 2 or length == 3 or length == 4:
+        return [chord]
+
+    while length > 0:
+        newChord = chord.duplicateChord()
+
+        newLength = math.floor(length)
+        if newLength == 0:
+
+            power = math.log(length, 2)
+            if power.is_integer():
+                newLength = length
+            else:
+                newLength = 2 ** math.floor(power)
+
+
+        newChord.length = newLength
+        length -= newLength
+
+        chords.append(newChord)
+
+    return chords
+
 
 def getCurrentPad():
     return pads[score[current_bar].pad]
@@ -575,6 +555,7 @@ def navigateAwayFrom():
 
     if x == -1 or x == None:
         for i in range(4, 8):
+            
             pad.chgat(i, y, 1, curses.color_pair(2))
     else:
         if current_chord.length >= 2:
@@ -583,39 +564,36 @@ def navigateAwayFrom():
             pad.chgat(x, y, 2, curses.color_pair(2))    
 
 def navigateToNote():
+    open("log.txt", "a").write("\nIn navigateToNote()")
 
     pad = getCurrentPad()
     [x, y] = getCurrentCoords()
+
     if x is not None:
         if x != -1:
             if current_chord.length >= 2:
                 pad.chgat(x, y, 2, curses.color_pair(1))
             else:
-                pad.chgat(x, y, 2, curses.color_pair(1))
+                pad.chgat(x, y, 1, curses.color_pair(1))
         else:
             for i in range(4, 8):
                 pad.chgat(i, y, 1, curses.color_pair(1))
 
-def getCurrentBeat():
-    return score[current_bar].beats[current_beat]
-
 def horizontalNavigation(dir):
     global current_bar
-    global current_beat
     global current_chord
     global current_note
 
     navigateAwayFrom()
 
     if dir == "KEY_RIGHT":
-        [nextBar, nextBeat, nextChord] = moveRight(current_bar, current_beat, current_chord)
+        [nextBar, nextChord] = moveRight(current_bar, current_chord)
 
     else:
-        [nextBar, nextBeat, nextChord] = moveLeft(current_bar, current_beat, current_chord)
+        [nextBar, nextChord] = moveLeft(current_bar, current_chord)
 
     if nextChord:
         current_bar = nextBar
-        current_beat = nextBeat
         current_chord = nextChord
         current_note = current_chord.notes[0]
 
@@ -626,8 +604,7 @@ def horizontalNavigation(dir):
         
         score.append(Bar(score[-1].endy, beats))
         current_bar = len(score) - 1
-        current_beat = 0
-        current_chord = getCurrentBeat().chords[0]
+        current_chord = score[-1].chords[0]
         current_note = current_chord.notes[0]
 
         score[current_bar].pad = padIndex
@@ -638,45 +615,45 @@ def horizontalNavigation(dir):
             drawEntireScore()
 
         else:
-            drawBar(score[-1])
+            drawBar(-1)
 
     navigateToNote()
 
-# Given a bar, beat, and chord, return the previous chord, regardless of which bar it's in
+# Given a bar and chord, return the previous chord, regardless of which bar it's in
 # Ignores empty beats
-def moveLeft(barIndex : int, beatIndex : int, chord : Chord):
+def moveLeft(barIndex : int, chord : Chord) -> list[int, Chord]:
 
     # Check the current Bar
-    [prevBeat, prevChord] = score[barIndex].getPrevChord(beatIndex, chord)
+    prevChord = score[barIndex].getPrevChord(chord)
 
     if prevChord:
-        return [barIndex, prevBeat, prevChord]
+        return [barIndex, prevChord]
 
     # Is there a previous Bar?
     if barIndex > 0:
-        [prevBeat, prevChord] = score[barIndex - 1].getLastChord()
-        return [barIndex - 1, prevBeat, prevChord]
+        prevChord = score[barIndex - 1].getLastChord()
+        return [barIndex - 1, prevChord]
 
     # If not, return None
-    return [None, None, None]
+    return [None, None]
 
 
-# Given a bar, beat, and chord, return the next chord along, regardless of which bar it's in
+# Given a bar and chord, return the next chord along, regardless of which bar it's in
 # Ignores empty beats
-def moveRight(barIndex : int, beatIndex : int, chord : Chord) -> list[int, int, Chord]:
+def moveRight(barIndex : int, chord : Chord) -> list[int, Chord]:
 
     # Check the current Bar
-    [nextBeat, nextChord] = score[current_bar].getNextChord(beatIndex, chord)
+    nextChord = score[barIndex].getNextChord(chord)
 
     if nextChord:
-        return [barIndex, nextBeat, nextChord]
+        return [barIndex, nextChord]
 
     # Is there a next Bar? Then return the first chord of that Bar
     if barIndex < len(score) - 1:
-        return [barIndex + 1, 0, score[barIndex + 1].beats[0].chords[0]] # The first chord of a bar cannot be empty
+        return [barIndex + 1, score[barIndex + 1].chords[0]] # The first chord of a bar cannot be empty
     
     # If not, return None
-    return [None, None, None]
+    return [None, None]
     
 
 # Cursor navigation vertically (within a chord)
@@ -729,14 +706,21 @@ def getCurrentCoords():
     return [x, y]
 
 def removeNote(pad):
+    
     global current_chord
     global current_note
 
     if not current_chord.rest:
         current_note = current_chord.removeNote(current_note)
+        
         drawChord(pad, current_chord)
 
-        navigateToNote()
+        if current_chord.rest:
+            [prevBar, prevChord] = moveLeft(current_bar, current_chord)
+            if prevChord:
+                prevChord.tie = False
+
+        navigateToNote()    
 
 def parseNote(stave_pad, note):
     global current_chord
@@ -761,8 +745,8 @@ def parseNote(stave_pad, note):
         # Current chord is a rest
         newChord = Chord(x, current_chord.length, current_chord.y)
 
-        index = getCurrentBeat().getChordIndex(current_chord)
-        getCurrentBeat().addChord(index, newChord)
+        index = score[current_bar].chords.index(current_chord)
+        score[current_bar].chords[index] = newChord
 
         current_chord = newChord
         current_note = current_chord.notes[0]
@@ -845,9 +829,15 @@ def drawChordAttributes(pad, chord, lastNote, dir):
     if chord.accent:
         pad.addstr(current_coord, chord.y, ">")
 
+
 def drawBarsFrom(barIndex):
     for i in range(barIndex, len(score)):
         drawBar(i)
+
+    for bar in score:
+        for chord in bar.chords:
+            if chord.tie:
+                Draw.drawTie(pads[bar.pad], chord)
 
 def drawBar(barIndex):
 
@@ -873,8 +863,8 @@ def drawBar(barIndex):
             pad.addstr(1, start_y, "\u250E")
             pad.addstr(9, start_y, "\u2516")
 
-        for beat in bar.beats:
-            drawBeat(pad, beat)
+        for chord in bar.chords:
+            drawChord(pad, chord)
 
         if barIndex == 0:
             Draw.drawBeginning(pad)
@@ -886,18 +876,13 @@ def drawBar(barIndex):
                 pad.move(i, end_y + 3)
                 pad.clrtoeol()
 
-def drawBeat(pad : curses.window, beat : Beat):
-
-    if beat.empty:
-        pass
-    if beat.restBeat():
-        Draw.drawRest(pad, beat.chords[0])
-    else:
-        for chord in beat.chords:
-            drawChord(pad, chord)
-
 def drawEntireScore():
     for i in range(len(score)):
         drawBar(i)
+
+    for bar in score:
+        for chord in bar.chords:
+            if chord.tie:
+                Draw.drawTie(pads[bar.pad], chord)
     
 wrapper(main)

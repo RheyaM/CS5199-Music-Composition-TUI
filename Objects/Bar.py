@@ -1,4 +1,5 @@
 from Objects.Beat import Beat
+from Objects.Chord import Chord
 class Bar:
     def __init__(self, y, beats):
         # y coord of start of bar
@@ -6,11 +7,11 @@ class Bar:
 
         self.endy = y + 26
 
-        # list of Beat objects in the bar
-        self.beats = []
+        # list of Chord objects in the bar
+        self.chords = []
         current_y = y + 4
         for i in range(beats):
-            self.beats.append(Beat(current_y))
+            self.chords.append(Chord(-1, 1, current_y, True))
             current_y = current_y + 6
 
         self.pad = 0
@@ -19,8 +20,8 @@ class Bar:
         self.y += change
         self.endy += change
         
-        for beat in self.beats:
-            beat.shiftBeat(change)
+        for chord in self.chords:
+            chord.shiftChord(change)
 
     # Takes a Beat object and returns the next one in the Bar
     # Returns the Beat object regardless of if its empty
@@ -34,53 +35,31 @@ class Bar:
 
     # Get the next chord, regardless of which beat it is in
     # Skips empty beats
-    def getNextChord(self, beat : int, chord):
+    def getNextChord(self, chord):
 
-        # get the next chord in the current beat
-        withinBeat = self.beats[beat].getNextChord(chord)
+        index = self.chords.index(chord)
+        if index >= len(self.chords) - 1:
+            return None
 
-        # If there was another chord in the current beat
-        if withinBeat:
-            return [beat, withinBeat]
+        return self.chords[index + 1]
 
-        # Else, look at the next beat
-        else:
-            temp = beat + 1
-            while temp <= len(self.beats) - 1:
-                if not self.beats[temp].empty:
-                    return [temp, self.beats[temp].chords[0]]
-                temp += 1
 
-        # None implies there are no more beats in the bar, hence no more chords
-        return [beat, None]
+    # Get the previous chord
+    def getPrevChord(self, chord):
 
-    # Get the previous chord, regardless of which beat it's in
-    # Skips empty beats
-    def getPrevChord(self, beat : int, chord):
+        index = self.chords.index(chord)
 
-        withinBeat = self.beats[beat].getPrevChord(chord)
+        if index > 0:
+            return self.chords[index - 1]
 
-        if withinBeat:
-            return [beat, withinBeat]
-
-        # Was no previous chord in the current beat
-        else:
-            temp = beat - 1
-            while temp >= 0:
-                if not self.beats[temp].empty:
-                    return [temp, self.beats[temp].chords[-1]]
-                temp -= 1
-
-        # None implies there are no previous beats/chords in the bar
-        return [beat, None]
+        return None
 
     def redoY(self):
 
         # Can only control the y of current chord
         # So add to y based on current chord, then beginning of next loop make that the chords y
 
-        beat = 0
-        chord = self.beats[0].chords[0]
+        chord = self.chords[0]
 
         y = self.y + 4
 
@@ -102,25 +81,36 @@ class Bar:
             elif chord.length < 1:
                 y += 4
 
-            [beat, chord] = self.getNextChord(beat, chord)
+            chord = self.getNextChord(chord)
 
-    
         self.endy = y
 
         return self.endy
 
     def emptyBar(self):
-        for beat in self.beats:
-            beat.chords = []
-            beat.empty = True
+        self.chords = []
 
     # Returns the beat index and chord object of the last chord in the Bar
     def getLastChord(self):
-        index = len(self.beats) - 1
-        while self.beats[index].empty:
-            index -= 1
+        return self.chords[-1]
 
-        return [index, self.beats[index].chords[-1]]
+    def halfChord(self, chord):
+        index = self.chords.index(chord)
+
+        if chord.length == 4 or chord.length == 3:
+            chord.length -= 1
+        else:
+            chord.length /= 2
+
+        newLength = chord.length
+        
+        if chord.length == 2 or chord.length == 3:
+            newLength = 1
+
+        newChord = Chord(-1, newLength, chord.y + 4, True)
+        self.chords.insert(index + 1, newChord)
+
+        return newChord
 
 
             
