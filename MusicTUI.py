@@ -412,10 +412,13 @@ def incLength():
         overrideChords(current_bar, current_chord, 1)
         
     else:
-        overrideChords(current_bar, current_chord, current_chord.length)
+        length = current_chord.length
+        # If it's not the last chord in the bar, increase the length
         if index != len(score[current_bar].chords) - 1:
             current_chord.length *= 2
-
+            
+        overrideChords(current_bar, current_chord, length)
+        
     redoAllPads(score)
     drawBarsFrom(current_bar)
     navigateToNote()
@@ -423,6 +426,7 @@ def incLength():
 # overrideChords should be: starting from this chord (don't incl it), eat this much space.
 # space <= 1, always
 def overrideChords(barIndex : int, chord, space : float):
+    open("log.txt", "a").write("\nIn overrideChords(" + str(barIndex)+", " + str(space))
 
     while space > 0:
         [nextBar, nextChord] = moveRight(barIndex, chord)
@@ -430,6 +434,7 @@ def overrideChords(barIndex : int, chord, space : float):
 
         # If there is no next chord to eat, create a newBar
         if nextChord is None:
+            open("log.txt", "a").write("\nb")
             newBar = Bar(score[-1].endy, beats)
             score.append(newBar)
 
@@ -445,8 +450,11 @@ def overrideChords(barIndex : int, chord, space : float):
 
         # There is another chord to eat, within the bar or in the next one
         else:
+            open("log.txt", "a").write("\nc")
             
             if barIndex != nextBar:
+                open("log.txt", "a").write("\nd")
+
                 # add the tied chord to beginning of nextBar
                 newChord = Chord(-1, space, score[nextBar].chords[0].y)
                 newChord.notes = chord.notes
@@ -457,14 +465,46 @@ def overrideChords(barIndex : int, chord, space : float):
 
             # Chord eaten, and it needs a remainder
             if space < 0:
+                open("log.txt", "a").write("\ne")
+
                 remainderChord = nextChord.duplicateChord()
                 remainderChord.length = abs(space)
 
-                # TODO: remainder chord could be like 0.75. then what
+                chordsToAdd = splitChord(remainderChord)
+                for c in chordsToAdd:
+                    score[nextBar].chords.insert(index + 1, c)
 
-                score[nextBar].chords.insert(index + 1, remainderChord)
+                score[nextBar].redoY()
 
-    # score[current_bar].redoY()
+
+def splitChord(chord : Chord) -> list[Chord]:
+    chords = []
+    length = chord.length
+
+    if length == 1 or length == 2 or length == 3 or length == 4:
+        return [chord]
+
+    while length > 0:
+        newChord = chord.duplicateChord()
+
+        newLength = math.floor(length)
+        if newLength == 0:
+
+            power = math.log(length, 2)
+            if power.is_integer():
+                newLength = length
+            else:
+                newLength = 2 ** math.floor(power)
+
+
+        newChord.length = newLength
+        length -= newLength
+
+        chords.append(newChord)
+
+    return chords
+
+
 
 def getCurrentPad():
     return pads[score[current_bar].pad]
