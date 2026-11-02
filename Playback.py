@@ -22,6 +22,8 @@ class Playback:
         for bar in score:
             for chord in bar.chords:
                 length = chord.length / 2
+                if chord.staccato:
+                    length = 0.2
                 xvalues = Playback.chordToPitches(chord)
 
                 if xvalues[0] == None:
@@ -29,14 +31,19 @@ class Playback:
 
                 else:
                     freqs = music.pitch_to_freq(start_freq=440, semitones=xvalues)
-                    chord = music.note(freqs[0], length)
+                    chordToAdd = music.note(freqs[0], length)
                     if len(freqs) > 1:
                         for f in freqs[1::]:
-                            chord = music.mix(chord, music.note(f, length))
+                            chordToAdd = music.mix(chordToAdd, music.note(f, length))
 
-                    chords.append(chord)
+                        
 
-            # TODO: staccato
+                    chords.append(chordToAdd)
+
+                    if chord.staccato:
+                        chords.append(music.silence((chord.length / 2) - 0.2))
+
+            
 
         return chords
 
@@ -59,8 +66,6 @@ class Playback:
 
             if note.flat:
                 dictPitch -= 1
-
-            # finalPitch = dictPitch + (12 * (toMultiply - 1))
 
             xvalues.append(dictPitch)
 
