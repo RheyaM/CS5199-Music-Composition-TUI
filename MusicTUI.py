@@ -3,11 +3,11 @@ from curses import wrapper
 from curses.textpad import Textbox, rectangle
 
 from Objects.Bar import Bar
-from Objects.Beat import Beat
 from Objects.Chord import Chord
 from Objects.Note import Note
 from Draw import Draw
 from Representation import Representation
+from Playback import Playback
 
 import math
 
@@ -126,7 +126,7 @@ def main(stdscr : curses.window) -> None:
                 saveAs(stdscr, textbox)
 
             case "p":
-                Draw.drawTie(stave_pad, current_chord)
+                Playback.playAudio(score)
 
             case "l" | "L":
                 load(stdscr)

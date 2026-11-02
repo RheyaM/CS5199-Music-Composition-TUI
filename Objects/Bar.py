@@ -1,4 +1,3 @@
-from Objects.Beat import Beat
 from Objects.Chord import Chord
 class Bar:
     def __init__(self, y, beats):
