@@ -8,7 +8,7 @@ class Draw:
     hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes" , "Opt-Up/Down": "transpose by 1", 
              "SHIFT-Up/Down": "transpose by an octave", "SHIFT-Left/Right": "swap notes", 
              "[,]": "adjust note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
-             "n": "natural", "ENTER": "Reformat bars"}
+             "n": "natural"}
 
     def drawTreble(pad, x, y):
         pad.addstr(x, y, "|\\")
@@ -60,12 +60,16 @@ class Draw:
             for i in range(4):
                 pad.addstr(4 + i, y + 1, "|")
 
+        elif chord.length == 4:
+            pad.addstr(3, y, "▃▃")
 
         elif chord.length == 2:
             pad.addstr(5, y, "▀▀")
 
-        elif chord.length == 4:
-            pad.addstr(3, y, "▃▃")
+        elif chord.length == 3:
+            pad.addstr(5, y, "▀▀•")
+
+        
 
     def drawNotes(pad : curses.window, chord : Chord) -> list[int]:
         notes = chord.notes

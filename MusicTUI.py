@@ -114,7 +114,7 @@ def main(stdscr : curses.window) -> None:
                 toggleAccent(stave_pad)
 
             case "[":
-                decLength(stave_pad)
+                decLength()
 
             case "]":
                 incLength()
@@ -344,7 +344,7 @@ def redoAllPads(score):
         currentPad = bar.pad
         end_y = bar.endy
 
-def shiftElementsRight(pad, change):
+def shiftElementsRight(change):
     open("log.txt", "a").write("\nIn shiftElementsRight. Change:" + str(change))
     global current_chord
     global current_bar
@@ -362,7 +362,7 @@ def shiftElementsRight(pad, change):
     for i in range(current_bar, len(score)):
         drawBar(i)
 
-def decLength(pad):
+def decLength():
     global current_chord
     global current_note
 
@@ -370,10 +370,11 @@ def decLength(pad):
     if current_chord.tie:
         return
 
-    bar = score[current_bar]
-
+    # Minimum chord length
     if current_chord.length <= 0.0625:
         return
+
+    bar = score[current_bar]
 
     # Current chord is the newly created half note
     current_chord = bar.halfChord(current_chord)
@@ -384,11 +385,11 @@ def decLength(pad):
 
     # If the next chord is not far enough from the newly created current chord, shift it along
     if nextChord and (nextChord.y < current_chord.y + 4):
-        shiftElementsRight(pad, 5 - (nextChord.y - current_chord.y))
+        shiftElementsRight(5 - (nextChord.y - current_chord.y))
 
     # If its the last chord and overtook the end of the bar
     if current_chord.y + 5 > score[current_bar].endy:
-        shiftElementsRight(pad, 5 - (score[current_bar].endy - current_chord.y))
+        shiftElementsRight(5 - (score[current_bar].endy - current_chord.y))
     
     # If its not the last bar and the next bar doesn't start where it should 
     if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
@@ -409,6 +410,10 @@ def incLength():
     # If the current chord is tied to the next, any change to length should be done to the last chord
     # (For now)
     if current_chord.tie:
+        return
+
+    # Rests do not form ties
+    if index == len(score[current_bar].chords) - 1 and current_chord.rest:
         return
 
     if current_chord.length == 2 or current_chord.length == 3 or current_chord.length == 4:
@@ -479,7 +484,6 @@ def overrideChords(barIndex : int, chord, space : float):
                     score[nextBar].chords.insert(index + 1, c)
 
                 score[nextBar].redoY()
-
 
 def splitChord(chord : Chord) -> list[Chord]:
     chords = []
@@ -836,7 +840,7 @@ def drawBarsFrom(barIndex):
 
     for bar in score:
         for chord in bar.chords:
-            if chord.tie:
+            if chord.tie and not chord.rest:
                 Draw.drawTie(pads[bar.pad], chord)
 
 def drawBar(barIndex):
@@ -882,7 +886,7 @@ def drawEntireScore():
 
     for bar in score:
         for chord in bar.chords:
-            if chord.tie:
+            if chord.tie and not chord.rest:
                 Draw.drawTie(pads[bar.pad], chord)
     
 wrapper(main)

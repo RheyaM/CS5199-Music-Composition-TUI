@@ -107,7 +107,7 @@ class Bar:
         if chord.length == 2 or chord.length == 3:
             newLength = 1
 
-        newChord = Chord(-1, newLength, chord.y + 4, True)
+        newChord = Chord(-1, newLength, chord.y + 5, True)
         self.chords.insert(index + 1, newChord)
 
         return newChord
