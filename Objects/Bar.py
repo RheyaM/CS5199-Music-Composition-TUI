@@ -22,15 +22,6 @@ class Bar:
         for chord in self.chords:
             chord.shiftChord(change)
 
-    # Takes a Beat object and returns the next one in the Bar
-    # Returns the Beat object regardless of if its empty
-    def getNextBeat(self, beat):
-        index = self.beats.index(beat)
-
-        if index < len(self.beats) - 1:
-            return self.beats[index + 1]
-        else:
-            return None
 
     # Get the next chord, regardless of which beat it is in
     # Skips empty beats

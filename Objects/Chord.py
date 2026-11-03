@@ -8,7 +8,11 @@ class Chord:
         self.notes = [Note(pitch)]
         self.staccato = False
         self.accent = False
-        self.rest = rest
+
+        if pitch == -1:
+            self.rest = True
+        else:
+            self.rest = rest
 
         self.tie = False
 
