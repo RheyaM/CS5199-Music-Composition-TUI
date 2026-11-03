@@ -113,11 +113,9 @@ class Draw:
         y += 1
         
         above = pad.instr(x, y + 1, 3).decode("utf-8")
-        open("log.txt", "a").write("\n" + above)
 
 
         while above != "❨" and above != "⚪":
-            open("log.txt", "a").write("\nj" + str(above))
             pad.addstr(linex, y + 1, chars[1])
             y += 1
             above = pad.instr(x, y + 1, 3).decode("utf-8")

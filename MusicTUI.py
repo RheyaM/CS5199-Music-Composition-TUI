@@ -875,9 +875,10 @@ def drawBar(barIndex):
 
         # If a bar is the last on its pad, or the last in score, remove any further characters
         if (barIndex < len(score) - 1 and score[barIndex + 1].pad > score[barIndex].pad) or barIndex == len(score) - 1:
+            open("log.txt", "a").write("\nIn drawBar(), bar " + str(barIndex) + " is last on its pad")
             [height, width] = pad.getmaxyx()
             for i in range(height):
-                pad.move(i, end_y + 3)
+                pad.move(i, end_y + 1)
                 pad.clrtoeol()
 
 def drawEntireScore():
