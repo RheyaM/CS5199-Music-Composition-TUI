@@ -6,13 +6,15 @@ coordsToPitch = { 0: 0, 1 : -2, 2 : -4, 3 : -5, 4 : -7, 5 : -9, 6 : -10}
 
 class Playback:
 
-    def playAudio(score):
+    def playAudio(score, file):
         chords = Playback.scoreToPlayback(score)
 
         melody = music.horizontal_stack(*[music.adsr(sonic_vector=n)
                                   for n in chords])
 
-        music.write_wav_mono(melody, "playback.wav")
+        if file == "":
+            file = "playback"
+        music.write_wav_mono(melody, file + ".wav")
         music.play_audio(melody)
 
     def scoreToPlayback(score):

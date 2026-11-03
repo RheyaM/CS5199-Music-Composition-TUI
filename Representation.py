@@ -94,7 +94,6 @@ class Representation:
         # While there are still bars to extract
         while len(notes) > 1:
             [bar, notes] = Representation.extractBar(notes, beats)
-            print("notes returned after extractBar: " + notes)
             score.append(bar)
 
         return score
@@ -108,21 +107,16 @@ class Representation:
         bar = Bar(0, beats)
         bar.emptyBar()
 
-        print("barNotes: " + barNotes)
-
-        currentBeat = 0
-        totalLength = 0
-
         while len(barNotes) > 1:
 
             ch = barNotes[0]
 
             if ch == "|":
+                bar.redoY()
                 return [bar, barNotes]
 
             if ch == "<":
                 [chord, barNotes] = Representation.extractChord(barNotes)
-                totalLength += int(chord.length)
                 Representation.current_length = chord.length
 
             elif ch in Representation.note_dict.keys() or ch == "r":
@@ -135,34 +129,21 @@ class Representation:
 
                 if length is None:
                     length = Representation.current_length
-                    print("Using " + str(Representation.current_length) + " as length")
                 else:
-                    print("Updating current_length to: " + str(length))
                     Representation.current_length = length
 
                 chord = Chord(pitch, length, 0)
 
                 func(chord.notes[0])
 
-                totalLength += chord.length
 
-            bar.beats[currentBeat].addChord(-1, chord)
+            bar.chords.append(chord)
 
-            if totalLength == 1 or totalLength == 2 or totalLength == 3:
-                currentBeat = int(currentBeat + totalLength)
-                totalLength = 0
-
-                if currentBeat >= beats:
-                    currentBeat = 0
-                
-                print("Updating currentBeat to: " + str(currentBeat))
-
-        # substring = substring[barregex.end(1) - 1 ::]
+        bar.redoY()
         return [bar, barNotes]
 
     # Given a substring beginning with a length
     def extractLength(substring):
-        print("Extracting length: " + substring)
 
         length = re.search("^(\.?[0-9]+).*", substring)
 
@@ -173,15 +154,15 @@ class Representation:
         return [None, substring]
 
 
-    # Given a substring beginning with '
+    # Given a substring beginning with ' or ,
     def extractOctaveIndicators(substring):
 
-        print("Extracting Octave Indicators: " + substring)
-
-        indicators = re.search("^('+).*", substring)
+        indicators = re.search("^([',\,]+).*", substring)
         if indicators:
-            print("Found an octave indicator: " + indicators.group(1))
             number = len(indicators.group(1))
+            if indicators.group(1)[0] == ",":
+                number *= -1
+
             return [number, substring[indicators.end(1)::]]
 
         return [0, substring]
@@ -189,7 +170,7 @@ class Representation:
     
     # Given a substring beginning with a note
     def getChordNote(substring):
-        print("Getting Chord Note: "+substring)
+        print("substring was:" +substring)
 
         note = substring[0]
 
@@ -206,11 +187,12 @@ class Representation:
 
             return [pitch, substring]
 
+        
+
         return [None, substring]
 
 
     def extractNoteAttributes(substring):
-        print("Extracting Note Attributes: " + substring)
         def passFunc(self):
             pass
 
@@ -222,10 +204,10 @@ class Representation:
                 return [Note.toggleSharp, substring[1::]]
 
             case "-":
-                return [Note.toggleFlat(), substring[1::]]
+                return [Note.toggleFlat, substring[1::]]
 
             case "n":
-                return [Note.toggleNatural(), substring[1::]]
+                return [Note.toggleNatural, substring[1::]]
 
             case _:
                 return [passFunc, substring]
@@ -234,8 +216,6 @@ class Representation:
     # Given a substring beginning with "<"
     def extractChord(substring):
         global note_dict 
-
-        print("Extracting chord: " + substring)
 
         notes = re.search("^<([a-z',#-]+)>.*", substring)
 
@@ -248,6 +228,7 @@ class Representation:
         while ch != ">":
 
             [pitch, substring] = Representation.getChordNote(substring[0::])
+            print("pitch: " + str(pitch))
             note = chord.addNote(pitch)
 
             [func, substring] = Representation.extractNoteAttributes(substring)
@@ -257,8 +238,6 @@ class Representation:
 
         [length, substring] = Representation.extractLength(substring[1::])
         chord.length = length
-
-        print("extractChord returning substring: " + substring)
 
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]

@@ -126,7 +126,7 @@ def main(stdscr : curses.window) -> None:
                 saveAs(stdscr, textbox)
 
             case "p":
-                Playback.playAudio(score)
+                Playback.playAudio(score, file.replace(".txt", ""))
 
             case "l" | "L":
                 load(stdscr)
@@ -237,8 +237,14 @@ def refreshVisiblePads(stdscr):
 def load(stdscr):
     global file
     global score
+    global current_bar
+    global current_chord
+    global current_note
+    global visible
 
     stdscr.clear()
+    for pad in pads:
+        pad.clear()
 
     stdscr.addstr(stdscr_height - 7, 1, "Input your file name")
     stdscr.addstr(stdscr_height - 1, 1, "^G: Confirm          To cancel, leave empty")
@@ -249,11 +255,11 @@ def load(stdscr):
     stdscr.refresh()
 
     box.edit()
-    text = box.gather()
+    text = box.gather().replace("\n","").replace(" ", "")
 
     try:
         with open(text, "r") as myfile:
-            string = myfile.read().replace("\n", "")
+            string = myfile.read().replace("\n", "").replace(" ", "")
     
         myfile.close()
 
@@ -261,12 +267,24 @@ def load(stdscr):
 
         score = Representation.stringToScore(string)
 
-    except:
-        pass
+    except Exception as e:
+        open("log.txt", "a").write("\n" + str(e))
 
-    stdscr.clear()
+    current_bar = 0
+    current_chord = score[current_bar].chords[0]
+    current_note = current_chord.notes[0]
+    
+    redoAllPads(score)
     drawEntireScore()
+    navigateToNote()
+
+    visiblePadsNum = (stdscr_height - 6)//stave_height
+    visible = list(range(0, len(pads) - 1))[:visiblePadsNum]
+    
+
     refreshVisiblePads(stdscr)
+
+
 
 def save(stdscr : curses.window, textbox : curses.window):
 
@@ -300,7 +318,8 @@ def saveAs(stdscr, textbox):
     stdscr.refresh()
 
     box.edit()
-    text = box.gather()
+    text = box.gather().replace("\n", "").replace(" ", "")
+
 
     if text != "":
         with open(text + ".txt", "a") as myfile:
@@ -378,6 +397,11 @@ def redoAllPads(score):
 
             if bar.pad >= len(pads):
                 pads.append(curses.newpad(14, 300))
+
+            # Update pad value of all bars that come after
+            index = score.index(bar)
+            for b in score[index + 1 ::]:
+                b.pad += 1
 
 
         currentPad = bar.pad
@@ -915,7 +939,6 @@ def drawBar(barIndex):
 
         # If a bar is the last on its pad, or the last in score, remove any further characters
         if (barIndex < len(score) - 1 and score[barIndex + 1].pad > score[barIndex].pad) or barIndex == len(score) - 1:
-            open("log.txt", "a").write("\nIn drawBar(), bar " + str(barIndex) + " is last on its pad")
             [height, width] = pad.getmaxyx()
             for i in range(height):
                 pad.move(i, end_y + 1)
