@@ -24,6 +24,7 @@ beats = 4
 # First bar starts at y = 13 and there are 4 beats in a bar
 score = [Bar(11, beats), Bar(37, beats)]
 pads : list[curses.window] = []
+visible : list[int] = [] # Indexes of pads which are currently fully visible in pads
 
 current_bar : int = 0 # Index of current bar object in score[]
 current_chord : Chord = score[0].chords[0] # Chord object
@@ -37,8 +38,6 @@ stdscr_height : int = 0
 
 # TODO: allow higher/lower notes past the stave
 # TODO: Is it better to transpose with - and +?
-# TODO: draw rests in drawChord() since rests are chords now
-
 
 def main(stdscr : curses.window) -> None:
     global stdscr_width
@@ -51,6 +50,7 @@ def main(stdscr : curses.window) -> None:
     textbox = setUpTextbox()
     hints = setUpHints()
     stave_pad = getCurrentPad()
+    visible.append(0)
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
@@ -153,7 +153,7 @@ def main(stdscr : curses.window) -> None:
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
-        refreshStavePad()
+        refreshVisiblePads(stdscr)
         stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
@@ -190,18 +190,55 @@ def setUpHints() -> curses.window:
     
     return hints
 
-def refreshStavePad() -> int:
+# Shifting the visible pads based on the current pad
+def shiftVisible(visible : list[int], currentPadIndex : int) -> None:
+
+    # If the current pad is already visible
+    if currentPadIndex in visible:
+        return
+
+    if currentPadIndex < visible[0]:
+        toRemove = -1
+    else:
+        toRemove = 0
+
+    # Add the new pad to the visible pads
+    visible.append(currentPadIndex)
+    visible.sort()
+
+    # If there are too many visible pads for the current stave_height, remove one
+    if len(visible) > (stdscr_height - 6)/stave_height:
+        visible.pop(toRemove)
+
+    return visible
+
+def refreshVisiblePads(stdscr):
+
     x : int = 1
-    for pad in pads:
-        if x < stdscr_height - 5:
-            pad.refresh(0, 0, x, 1, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
-        x += 13
+
+    # Refresh all visible staves
+    for index in visible:
+        pad = pads[index]
+        pad.refresh(0, 0, x, 1, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
+
+        x += stave_height
+
+    # If there is space for a partly visible stave
+    if x < stdscr_height - 5 and visible[-1] <= len(pads) - 2:
+        pad = pads[visible[-1] + 1]
+        pad.refresh(0, 0, x, 1, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
+
+    else:
+        for i in range(x, stdscr_height - 6):
+            stdscr.move(i, 0)
+            stdscr.clrtoeol()
+
 
 def load(stdscr):
     global file
     global score
 
-    stdscr.erase()
+    stdscr.clear()
 
     stdscr.addstr(stdscr_height - 7, 1, "Input your file name")
     stdscr.addstr(stdscr_height - 1, 1, "^G: Confirm          To cancel, leave empty")
@@ -216,18 +253,20 @@ def load(stdscr):
 
     try:
         with open(text, "r") as myfile:
-            pass
-                
+            string = myfile.read().replace("\n", "")
+    
         myfile.close()
 
         file = text
+
+        score = Representation.stringToScore(string)
 
     except:
         pass
 
     stdscr.clear()
     drawEntireScore()
-    refreshStavePad()
+    refreshVisiblePads(stdscr)
 
 def save(stdscr : curses.window, textbox : curses.window):
 
@@ -621,6 +660,7 @@ def horizontalNavigation(dir):
         else:
             drawBar(-1)
 
+    shiftVisible(visible, score[current_bar].pad)
     navigateToNote()
 
 # Given a bar and chord, return the previous chord, regardless of which bar it's in
