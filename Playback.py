@@ -1,12 +1,14 @@
 from Objects.Bar import Bar
 from Objects.Chord import Chord
 import music
+import pygame
+from pygame import mixer
 
 coordsToPitch = { 0: 0, 1 : -2, 2 : -4, 3 : -5, 4 : -7, 5 : -9, 6 : -10}
 
 class Playback:
 
-    def playAudio(score, file):
+    def createAudio(score, file):
         chords = Playback.scoreToPlayback(score)
 
         melody = music.horizontal_stack(*[music.adsr(sonic_vector=n)
@@ -15,7 +17,21 @@ class Playback:
         if file == "":
             file = "playback"
         music.write_wav_mono(melody, file + ".wav")
-        music.play_audio(melody)
+        # music.play_audio(melody)
+        Playback.playAudio(file + ".wav")
+
+    def playAudio(file):
+        pygame.init()
+        mixer.init()
+
+        mixer.music.load(file)
+        mixer.music.play()
+
+    def stopAudio():
+        mixer.music.stop()
+
+    def checkAudio():
+        return mixer.music.get_busy()
 
     def scoreToPlayback(score):
 

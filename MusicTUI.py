@@ -51,6 +51,7 @@ def main(stdscr : curses.window) -> None:
     hints = setUpHints()
     stave_pad = getCurrentPad()
     visible.append(0)
+    playPad = None
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
@@ -126,7 +127,11 @@ def main(stdscr : curses.window) -> None:
                 saveAs(stdscr, textbox)
 
             case "p":
-                Playback.playAudio(score, file.replace(".txt", ""))
+                playPad = playAudio(score, file.replace(".txt", ""))
+
+            case "v":
+                Playback.stopAudio()
+                playPad = None
 
             case "l" | "L":
                 load(stdscr)
@@ -153,10 +158,28 @@ def main(stdscr : curses.window) -> None:
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
+        # if not Playback.checkAudio():
+        #     playPad.erase()
+        #     playPad = None
+
+        # if playPad:
+        #     playPad.refresh(0, 0, stdscr_height - 4, stdscr_width - 35, stdscr_height - 1, stdscr_width - 1)
+            
         refreshVisiblePads(stdscr)
         stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
+
+# TODO: cut the chords of the current bar to only play from current_chord
+def playAudio(score, file):
+    playPad = curses.newpad(4, 20)
+    playPad.addstr(1, 1, "Playing... 'v' to Pause")
+
+
+    subscore = score[current_bar::]
+    Playback.createAudio(subscore, file)
+
+    return playPad
 
 def setUpTUI(stdscr: curses.window) -> None:
 
