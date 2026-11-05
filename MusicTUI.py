@@ -1,6 +1,10 @@
+"""Python module providing screen painting and window creation functionality"""
 import curses
 from curses import wrapper
 from curses.textpad import Textbox, rectangle
+
+"""Importing math module for logs"""
+import math
 
 from Objects.Bar import Bar
 from Objects.Chord import Chord
@@ -9,20 +13,19 @@ from Draw import Draw
 from Representation import Representation
 from Playback import Playback
 
-import math
 
 # TODO: if navigateToNote() always comes after drawChord then just put it in drawChord
 # TODO: be able to display key
 
-file = ""
+file : str = ""
 
-note_dict = {"c": 11, "d": 10, "e": 9, "f": 8, "g": 7, "a": 6, "b": 5}
-all_notes = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
+note_dict : dict = {"c": 11, "d": 10, "e": 9, "f": 8, "g": 7, "a": 6, "b": 5}
+all_notes : list[str] = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
 
-beats = 4
+beats : int = 4
 
 # First bar starts at y = 13 and there are 4 beats in a bar
-score = [Bar(11, beats), Bar(37, beats)]
+score : list[Bar] = [Bar(11, beats), Bar(37, beats)]
 pads : list[curses.window] = []
 visible : list[int] = [] # Indexes of pads which are currently fully visible in pads
 
@@ -46,11 +49,11 @@ def main(stdscr : curses.window) -> None:
     
     setUpTUI(stdscr)
 
-    textbox = setUpTextbox()
-    hints = setUpHints()
-    stave_pad = getCurrentPad()
+    textbox : curses.window = setUpTextbox()
+    hints : curses.window = setUpHints()
+    stave_pad : curses.window = getCurrentPad()
     visible.append(0)
-    playPad = None
+    # playPad = None
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
@@ -60,7 +63,7 @@ def main(stdscr : curses.window) -> None:
 
     while True:
 
-        char = stdscr.getkey()
+        char : chr = stdscr.getkey()
 
         match char:
             case "q":
@@ -169,12 +172,12 @@ def main(stdscr : curses.window) -> None:
         open("keylog.txt", "a").write("\n" + char)
 
 # TODO: cut the chords of the current bar to only play from current_chord
-def playAudio(score, file):
-    playPad = curses.newpad(4, 20)
+def playAudio(score : list[Bar], file : str) -> curses.window:
+    playPad : curses.window = curses.newpad(4, 20)
     playPad.addstr(1, 1, "Playing... 'v' to Pause")
 
 
-    subscore = score[current_bar::]
+    subscore : list[Bar] = score[current_bar::]
     Playback.createAudio(subscore, file)
 
     return playPad
@@ -189,7 +192,7 @@ def setUpTUI(stdscr: curses.window) -> None:
     stdscr.clear()
     
     # Creating and adding the first stave pad to the screen
-    stave_pad = curses.newpad(15, 300)
+    stave_pad : curses.window = curses.newpad(15, 300)
 
     stdscr.refresh()
     pads.append(stave_pad)
@@ -200,28 +203,28 @@ def setUpTUI(stdscr: curses.window) -> None:
     
 
 def setUpTextbox() -> curses.window:
-    textbox = curses.newpad(3, stdscr_width)
+    textbox : curses.window = curses.newpad(3, stdscr_width)
     textbox.addstr(1, 0, Representation.scoreToString(score, beats))
 
     return textbox
 
 def setUpHints() -> curses.window:
-    hints = curses.newpad(3, 300)
+    hints : curses.window = curses.newpad(3, 300)
     Draw.drawHints(hints, stdscr_width)
     
     return hints
 
 # Shifting the visible pads based on the current pad
-def shiftVisible(visible : list[int], currentPadIndex : int) -> None:
+def shiftVisible(visible : list[int], currentPadIndex : int) -> list[int]:
 
     # If the current pad is already visible
     if currentPadIndex in visible:
         return
 
     if currentPadIndex < visible[0]:
-        toRemove = -1
+        toRemove : int = -1
     else:
-        toRemove = 0
+        toRemove : int = 0
 
     # Add the new pad to the visible pads
     visible.append(currentPadIndex)
@@ -233,7 +236,7 @@ def shiftVisible(visible : list[int], currentPadIndex : int) -> None:
 
     return visible
 
-def refreshVisiblePads(stdscr):
+def refreshVisiblePads(stdscr : curses.window) -> None:
 
     x : int = 1
 
@@ -255,7 +258,7 @@ def refreshVisiblePads(stdscr):
             stdscr.clrtoeol()
 
 
-def load(stdscr):
+def load(stdscr) -> None:
     global file
     global score
     global current_bar
@@ -308,7 +311,7 @@ def load(stdscr):
 
 
 
-def save(stdscr : curses.window, textbox : curses.window):
+def save(stdscr : curses.window, textbox : curses.window) -> None:
 
     # Writing the stave itself to the .txt file:
     # for pad in pads:
@@ -325,7 +328,7 @@ def save(stdscr : curses.window, textbox : curses.window):
     else:
         saveAs(stdscr, textbox)
 
-def saveAs(stdscr, textbox):
+def saveAs(stdscr : curses.window, textbox : curses.window) -> None:
     open("log.txt", "a").write("\nIn saveAs")
     global file
 
@@ -355,15 +358,15 @@ def saveAs(stdscr, textbox):
     stdscr.refresh()
 
 # Shifting a note - Musescore only allows shifting when notes are the same length, within the same bar
-def shift(pad, dir):
+def shift(pad : curses.window, dir : str):
     global current_bar
     global current_beat
     global current_chord
     global current_note
 
-    bar = score[current_bar]
+    bar : Bar = score[current_bar]
 
-    index = bar.chords.index(current_chord)
+    index : int = bar.chords.index(current_chord)
 
     if dir == "Right":
         [newBar, toSwitch] = moveRight(current_bar, current_chord)
@@ -377,11 +380,10 @@ def shift(pad, dir):
         if toSwitch.length != current_chord.length:
             return
 
-        newIndex = score[newBar].chords.index(toSwitch)
+        newIndex : int = score[newBar].chords.index(toSwitch)
 
         score[current_bar].chords[index] = toSwitch
         score[newBar].chords[newIndex] = current_chord
-
 
         # Updating the y coordinates of the relevant chords
         temp = current_chord.y

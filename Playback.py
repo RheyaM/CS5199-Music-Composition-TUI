@@ -28,7 +28,8 @@ class Playback:
         mixer.music.play()
 
     def stopAudio():
-        mixer.music.stop()
+        if mixer.get_init():
+            mixer.music.stop()
 
     def checkAudio():
         return mixer.music.get_busy()
