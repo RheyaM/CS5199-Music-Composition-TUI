@@ -37,7 +37,6 @@ stdscr_width : int = 0
 stdscr_height : int = 0
 
 # TODO: allow higher/lower notes past the stave
-# TODO: Is it better to transpose with - and +?
 
 def main(stdscr : curses.window) -> None:
     global stdscr_width
@@ -65,7 +64,6 @@ def main(stdscr : curses.window) -> None:
 
         match char:
             case "q":
-                # save(textbox)
                 break
 
             case "\x7f":
@@ -356,9 +354,7 @@ def saveAs(stdscr, textbox):
 
     stdscr.refresh()
 
-# TODO: quaver moving to next bar needs whatever is there to split in half??
-# Actually musescore doesn't allow shifting if they're not the same length...
-# Or if they're in different bars. Maybe i only shift if same length...
+# Shifting a note - Musescore only allows shifting when notes are the same length, within the same bar
 def shift(pad, dir):
     global current_bar
     global current_beat
@@ -399,7 +395,7 @@ def shift(pad, dir):
         navigateToNote()
 
 # Redo all y values of every bar, beat and chord to get true y values
-# TODO: change this so it only redoes ys from the changed bar. Which could be the start
+# TODO: only redoes ys from the changed bar
 def redoAllPads(score):
     global pads
     open("log.txt", "a").write("\nredoAllPads()")
@@ -450,6 +446,7 @@ def shiftElementsRight(change):
         drawBar(i)
 
 def decLength():
+    """Decrease the length of the current chords"""
     global current_chord
     global current_note
 
@@ -487,9 +484,7 @@ def decLength():
     navigateToNote()
 
 def incLength():
-    global current_chord
-
-    open("log.txt", "a").write("\nIn incLength()")
+    """Increase the length of the current chord"""
 
     # If it will form a tie, the length shouldn't change
     index = score[current_bar].chords.index(current_chord)
@@ -506,7 +501,7 @@ def incLength():
     if current_chord.length == 2 or current_chord.length == 3 or current_chord.length == 4:
         if index != len(score[current_bar].chords) - 1:
             current_chord.length += 1
-        overrideChords(current_bar, current_chord, 1)
+        override_chords(current_bar, current_chord, 1)
         
     else:
         length = current_chord.length
@@ -514,64 +509,65 @@ def incLength():
         if index != len(score[current_bar].chords) - 1:
             current_chord.length *= 2
             
-        overrideChords(current_bar, current_chord, length)
+        override_chords(current_bar, current_chord, length)
         
     redoAllPads(score)
-    drawBarsFrom(current_bar)
+    draw_bars_from(current_bar)
     navigateToNote()
 
-# overrideChords should be: starting from this chord (don't incl it), eat this much space.
-# space <= 1, always
-def overrideChords(barIndex : int, chord, space : float):
+# Note: the space to override will always be <= 1
+def override_chords(barIndex : int, chord, space : float):
+    """Given a chord and the space (length) to override, remove the appropriate number of following chords."""
 
     while space > 0:
-        [nextBar, nextChord] = moveRight(barIndex, chord)
+        [next_bar, next_chord] = moveRight(barIndex, chord)
         index = score[barIndex].chords.index(chord)
 
-        # If there is no next chord to eat, create a newBar
-        if nextChord is None:
-            newBar = Bar(score[-1].endy, beats)
-            score.append(newBar)
+        # If there is no next chord to override, create a newBar
+        if next_chord is None:
+            new_bar = Bar(score[-1].endy, beats)
+            score.append(new_bar)
 
-            newChord = chord.duplicateChord()
-            newChord.length = space
-            newChord.y = newBar.chords[0].y
+            new_chord = chord.duplicateChord()
+            new_chord.length = space
+            new_chord.y = new_bar.chords[0].y
 
-            newBar.chords.insert(0, newChord)
+            new_bar.chords.insert(0, new_chord)
 
-            overrideChords(len(score) - 1, newChord, newChord.length)
+            override_chords(len(score) - 1, new_chord, new_chord.length)
 
             chord.tie = True
             space = 0
 
-        # There is another chord to eat, within the bar or in the next one
+        # There is another chord to override, within the bar or in the next one
         else:
             
-            if barIndex != nextBar:
+            if barIndex != next_bar:
 
-                newChord = chord.duplicateChord()
-                newChord.length = space
-                newChord.y = score[nextBar].chords[0].y
+                new_chord = chord.duplicateChord()
+                new_chord.length = space
+                new_chord.y = score[next_bar].chords[0].y
 
-                score[nextBar].chords.insert(0, newChord)
+                score[next_bar].chords.insert(0, new_chord)
 
                 chord.tie = True
 
-            score[nextBar].chords.remove(nextChord)
-            space -= nextChord.length
+            score[next_bar].chords.remove(next_chord)
+            space -= next_chord.length
 
-            # Chord eaten, and it needs a remainder
+            # Chord overriden, and it needs a remainder
             if space < 0:
 
-                remainderChord = nextChord.duplicateChord()
-                remainderChord.length = abs(space)
+                remainder_chord = next_chord.duplicateChord()
+                remainder_chord.length = abs(space)
 
-                chordsToAdd = splitChord(remainderChord)
-                for c in chordsToAdd:
-                    score[nextBar].chords.insert(index + 1, c)
+                chords_to_add = splitChord(remainder_chord)
+                for c in chords_to_add:
+                    score[next_bar].chords.insert(index + 1, c)
 
-                score[nextBar].redoY()
+                score[next_bar].redoY()
 
+# Splitting chords into valid note lengths
 def splitChord(chord : Chord) -> list[Chord]:
     chords = []
     length = chord.length
@@ -922,7 +918,8 @@ def drawChordAttributes(pad, chord, lastNote, dir):
         pad.addstr(current_coord, chord.y, ">")
 
 
-def drawBarsFrom(barIndex):
+def draw_bars_from(barIndex):
+    """Alternative to drawBar, draw all bars starting from score[barIndex]."""
     for i in range(barIndex, len(score)):
         drawBar(i)
 
@@ -932,6 +929,7 @@ def drawBarsFrom(barIndex):
                 Draw.drawTie(pads[bar.pad], chord)
 
 def drawBar(barIndex):
+        """Draw bar score[barIndex] onto the stave."""
 
         bar = score[barIndex]
         pad = pads[bar.pad]
