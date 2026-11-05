@@ -101,9 +101,3 @@ class Bar:
         self.chords.insert(index + 1, newChord)
 
         return newChord
-
-
-            
-                
-            
-    

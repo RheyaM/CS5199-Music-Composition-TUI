@@ -283,7 +283,6 @@ def load(stdscr):
     try:
         with open(text, "r") as myfile:
             string = myfile.read().replace("\n", "").replace(" ", "")
-    
         myfile.close()
 
         file = text
@@ -298,6 +297,8 @@ def load(stdscr):
     current_note = current_chord.notes[0]
     
     redoAllPads(score)
+
+    open("log.txt", "a").write(str(score))
     drawEntireScore()
     navigateToNote()
 

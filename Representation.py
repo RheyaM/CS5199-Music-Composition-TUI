@@ -101,8 +101,7 @@ class Representation:
     # Given a substring beginning with |
     # Return the first bar extracted, and the remaining substring containing the last |
     def extractBar(substring, beats):
-        
-        # barregex = re.search("^\|(.*)\|.*", substring)
+
         barNotes = substring[1::]
         bar = Bar(0, beats)
         bar.emptyBar()
@@ -143,6 +142,7 @@ class Representation:
         return [bar, barNotes]
 
     # Given a substring beginning with a length
+    # TODO: should default to current_length here rather than once None has been extracted
     def extractLength(substring):
 
         length = re.search("^(\.?[0-9]+).*", substring)
@@ -170,7 +170,6 @@ class Representation:
     
     # Given a substring beginning with a note
     def getChordNote(substring):
-        print("substring was:" +substring)
 
         note = substring[0]
 
@@ -228,7 +227,6 @@ class Representation:
         while ch != ">":
 
             [pitch, substring] = Representation.getChordNote(substring[0::])
-            print("pitch: " + str(pitch))
             note = chord.addNote(pitch)
 
             [func, substring] = Representation.extractNoteAttributes(substring)
@@ -237,7 +235,13 @@ class Representation:
             ch = substring[0]
 
         [length, substring] = Representation.extractLength(substring[1::])
-        chord.length = length
+
+        if length is None:
+            chord.length = Representation.current_length
+        else:
+            chord.length = length
+            Representation.current_length = length
+
 
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]
