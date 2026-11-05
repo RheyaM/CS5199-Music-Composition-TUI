@@ -290,22 +290,20 @@ def load(stdscr) -> None:
 
         score = Representation.stringToScore(string)
 
-    except Exception as e:
+    except FileNotFoundError as e:
         open("log.txt", "a").write("\n" + str(e))
+
 
     current_bar = 0
     current_chord = score[current_bar].chords[0]
     current_note = current_chord.notes[0]
     
     redoAllPads(score)
-
-    open("log.txt", "a").write(str(score))
     drawEntireScore()
     navigateToNote()
 
     visiblePadsNum = (stdscr_height - 6)//stave_height
-    visible = list(range(0, len(pads) - 1))[:visiblePadsNum]
-    
+    visible = list(range(0, len(pads)))[:visiblePadsNum]
 
     refreshVisiblePads(stdscr)
 
