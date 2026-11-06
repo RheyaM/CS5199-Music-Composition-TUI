@@ -17,6 +17,8 @@ from Playback import Playback
 # TODO: if navigateToNote() always comes after drawChord then just put it in drawChord
 # TODO: be able to display key
 
+prevStack : list[str] = ["B:4.|r1rrr|rrrr|"]
+
 file : str = ""
 
 note_dict : dict = {"c": 11, "d": 10, "e": 9, "f": 8, "g": 7, "a": 6, "b": 5}
@@ -152,10 +154,10 @@ def main(stdscr : curses.window) -> None:
                 else:
                     stave_pad.addstr(0, 0, char)
 
-
-        textbox.clear()
-        textbox.addstr(1, 0, Representation.scoreToString(score, beats))
-        textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
+        new_string : str = Representation.scoreToString(score, beats)
+        # if there is a change to the score, refresh the textbox
+        if new_string != prevStack[-1]:
+            change_to_score(textbox, new_string)
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
@@ -170,6 +172,18 @@ def main(stdscr : curses.window) -> None:
         stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
+
+def change_to_score(textbox : curses.window, new_string : str) -> None:
+    """When a change is made to the score, update the string textbox and the stack of previous strings"""
+    global prevStack
+
+    textbox.clear()
+    textbox.addstr(1, 0, Representation.scoreToString(score, beats))
+    textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
+
+    # update prevStack, keep the latest 10 changes
+    prevStack.append(new_string)
+    prevStack = prevStack[-10:]
 
 # TODO: cut the chords of the current bar to only play from current_chord
 def playAudio(score : list[Bar], file : str) -> curses.window:

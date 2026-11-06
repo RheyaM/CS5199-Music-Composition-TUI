@@ -7,7 +7,7 @@ class Draw:
 
     hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes" , "Opt-Up/Down": "transpose by 1", 
              "SHIFT-Up/Down": "transpose by an octave", "SHIFT-Left/Right": "swap notes", 
-             "[,]": "adjust note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
+             "[": "decrease note length", "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
              "n": "natural"}
 
     def drawTreble(pad, x, y):
