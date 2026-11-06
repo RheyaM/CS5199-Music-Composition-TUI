@@ -25,18 +25,18 @@ class Draw:
 
     def drawBeginning(pad):
 
-        pad.addstr(1, 0, "\u250E" + ("\u2500" * 11))
+        pad.addstr(3, 0, "\u250E" + ("\u2500" * 11))
 
-        for i in range(3, 8, 2):
+        for i in range(5, 10, 2):
             pad.addstr(i, 0, "\u2520" + ("\u2500" * 11))
 
-        for i in range(2, 9, 2):
+        for i in range(4, 11, 2):
             pad.addstr(i, 0, "\u2503" + (" " * 11))
 
-        pad.addstr(9, 0, "\u2516" + ("\u2500" * 11))
+        pad.addstr(11, 0, "\u2516" + ("\u2500" * 11))
 
-        Draw.drawTreble(pad, 1, 4)
-        Draw.drawTimeSig(pad, 4, 10, "4", "4")
+        Draw.drawTreble(pad, 3, 4)
+        Draw.drawTimeSig(pad, 6, 10, "4", "4")
 
     
     def drawTimeSig(pad, x, y, num, dom):
@@ -46,30 +46,29 @@ class Draw:
     def drawRest(pad, chord):
         y = chord.y
         if chord.length == 1:
-            pad.addstr(4, y, "\u2572")
-            pad.addstr(5, y, "\u2571")
-            pad.addstr(6, y, "\u2572")
-            pad.addstr(7, y, "C")
+            pad.addstr(6, y, "╲")
+            pad.addstr(7, y, "╱")
+            pad.addstr(8, y, "╲")
+            pad.addstr(9, y, "C")
 
         elif chord.length < 1:
             subdivision = 1 / chord.length
             lines = math.log(subdivision, 2)
             for i in range(int(lines)):
-                pad.addstr(4 + i, y, "⚈")
+                pad.addstr(6 + i, y, "⚈")
 
             for i in range(4):
-                pad.addstr(4 + i, y + 1, "|")
+                pad.addstr(6 + i, y + 1, "|")
 
         elif chord.length == 4:
-            pad.addstr(3, y, "▃▃")
+            pad.addstr(5, y, "▃▃")
 
         elif chord.length == 2:
-            pad.addstr(5, y, "▀▀")
+            pad.addstr(7, y, "▀▀")
 
         elif chord.length == 3:
-            pad.addstr(5, y, "▀▀•")
+            pad.addstr(7, y, "▀▀•")
 
-        
 
     def drawNotes(pad : curses.window, chord : Chord) -> list[int]:
         notes = chord.notes
@@ -124,11 +123,10 @@ class Draw:
             
 
     def emptyStaveRegion(pad, y):
-        for x in range (1, 10, 2):
-            pad.addstr(x, y - 1, "────")
-        for x in range(0, 13, 2):
+        for x in range(0, 14):
             pad.addstr(x, y - 1, "    ")
-        pad.addstr(11, y - 1, "    ")
+        for x in range (3, 12, 2):
+            pad.addstr(x, y - 1, "────")
 
     def drawHints(pad, width):
         pad.erase()
@@ -149,3 +147,4 @@ class Draw:
             y += len(key) + 1
             pad.addstr(x, y, expl)
             y += len(expl) + 3
+            

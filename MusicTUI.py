@@ -21,7 +21,7 @@ prevStack : list[str] = ["B:4.|r1rrr|rrrr|"]
 
 file : str = ""
 
-note_dict : dict = {"c": 11, "d": 10, "e": 9, "f": 8, "g": 7, "a": 6, "b": 5}
+note_dict : dict = {"c": 13, "d": 12, "e": 11, "f": 10, "g": 9, "a": 8, "b": 7}
 all_notes : list[str] = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
 
 beats : int = 4
@@ -36,7 +36,7 @@ current_chord : Chord = score[0].chords[0] # Chord object
 current_note : Note = current_chord.notes[0] # Note object
 
 # stave_height - going to restrict how many octaves we can use
-stave_height : int = 13
+stave_height : int = 15
 
 stdscr_width : int = 0
 stdscr_height : int = 0
@@ -154,10 +154,8 @@ def main(stdscr : curses.window) -> None:
                 else:
                     stave_pad.addstr(0, 0, char)
 
-        new_string : str = Representation.scoreToString(score, beats)
-        # if there is a change to the score, refresh the textbox
-        if new_string != prevStack[-1]:
-            change_to_score(textbox, new_string)
+        # refresh the textbox
+        change_to_score(textbox, Representation.scoreToString(score, beats))
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
@@ -655,9 +653,9 @@ def navigateAwayFrom():
     [x, y] = getCurrentCoords()
 
     if x == -1 or x == None:
-        for i in range(4, 8):
-            
+        for i in range(6, 10):
             pad.chgat(i, y, 1, curses.color_pair(2))
+            pad.chgat(i, y + 1, 1, curses.color_pair(2))
     else:
         if current_chord.length >= 2:
             pad.chgat(x, y, 2, curses.color_pair(2)) 
@@ -677,8 +675,11 @@ def navigateToNote():
             else:
                 pad.chgat(x, y, 1, curses.color_pair(1))
         else:
-            for i in range(4, 8):
-                pad.chgat(i, y, 1, curses.color_pair(1))
+            if current_chord.length < 2:
+                for i in range(6, 10):
+                    pad.chgat(i, y, 1, curses.color_pair(1))
+            else:
+                pad.chgat(7, y, 2, curses.color_pair(1))
 
 def horizontalNavigation(dir):
     global current_bar
@@ -788,8 +789,12 @@ def transpose(direction, stave_pad, change):
         else:
             newPitch = current_note.pitch + change
 
+        # If the new pitch is outside the valid note range (C3 to D6)
+        # if newPitch > 22 or (newPitch < 0 and stave_height >= 22):
+        #     return
+
         # If new pitch is outside valid stave height
-        if newPitch < 0 or newPitch > 13:
+        if newPitch < 0 or newPitch > stave_height:
             return
 
         current_chord.removeNote(current_note)
@@ -891,7 +896,7 @@ def drawStem(pad : curses.window, chord : Chord, noteCoords : list[int]):
     if chord.length != 4:
         for i in range(noteRange + 5):
             x = start + i + 1
-            if x not in noteCoords and x >= 0 and x <= 13:
+            if x not in noteCoords and x >= 0 and x <= stave_height:
                 pad.addstr(x, side, "\u2502")
 
 
@@ -953,19 +958,19 @@ def drawBar(barIndex):
 
         length = end_y - start_y - 1
 
-        for i in range(0, 13):
+        for i in range(0, stave_height):
             pad.addstr(i, start_y, " " * (length + 2))
 
-        pad.addstr(1, start_y, "┰" + ("\u2500" * length) + "\u2512")
-        for i in range(2, 9, 2):
+        pad.addstr(3, start_y, "┰" + ("\u2500" * length) + "\u2512")
+        for i in range(4, 11, 2):
             pad.addstr(i, start_y, "\u2503" + (" " * length) + "\u2503")
-        for i in range(3, 8, 2):
+        for i in range(5, 10, 2):
             pad.addstr(i, start_y, "\u2520" + ("\u2500" * length) + "\u2528")
-        pad.addstr(9, start_y, "┸" + ("\u2500" * length) + "\u251A")
+        pad.addstr(11, start_y, "┸" + ("\u2500" * length) + "\u251A")
 
         if start_y == 0:
-            pad.addstr(1, start_y, "\u250E")
-            pad.addstr(9, start_y, "\u2516")
+            pad.addstr(3, start_y, "\u250E")
+            pad.addstr(11, start_y, "\u2516")
 
         for chord in bar.chords:
             drawChord(pad, chord)
