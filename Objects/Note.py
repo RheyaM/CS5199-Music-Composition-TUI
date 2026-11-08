@@ -1,5 +1,5 @@
 class Note:
-    def __init__(self, pitch):
+    def __init__(self, pitch : int):
         self.pitch = pitch #Integer (x-coord on the stave)
         self.sharp = False
         self.flat = False

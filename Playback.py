@@ -55,8 +55,6 @@ class Playback:
                         for f in freqs[1::]:
                             chordToAdd = music.mix(chordToAdd, music.note(f, length))
 
-                        
-
                     chords.append(chordToAdd)
 
                     if chord.staccato:
@@ -72,7 +70,7 @@ class Playback:
             if note.pitch == -1:
                 return [None]
             
-            pitch = (note.pitch - 6)
+            pitch = (note.pitch - 8)
 
             toMultiply = pitch // 7
             standardised = pitch - (toMultiply * 7)

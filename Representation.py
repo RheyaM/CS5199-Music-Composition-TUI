@@ -5,7 +5,7 @@ from Objects.Note import Note
 
 class Representation:
 
-    note_dict = {"c": 11, "d": 10, "e": 9, "f": 8, "g": 7, "a": 6, "b": 5}
+    note_dict = {"c": 13, "d": 12, "e": 11, "f": 10, "g": 9, "a": 8, "b": 7}
 
     current_length = 0
     
@@ -218,7 +218,7 @@ class Representation:
 
         notes = re.search("^<([a-z',#-]+)>.*", substring)
 
-        chord = Chord(-1, 0, 0, True)
+        chord = Chord(-1, 0, 0)
         chord.removeNote(chord.notes[0])
 
         substring = substring[notes.start(1)::]

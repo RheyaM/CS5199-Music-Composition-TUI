@@ -10,7 +10,7 @@ class Bar:
         self.chords = []
         current_y = y + 4
         for i in range(beats):
-            self.chords.append(Chord(-1, 1, current_y, True))
+            self.chords.append(Chord(-1, 1, current_y))
             current_y = current_y + 6
 
         self.pad = 0
@@ -25,7 +25,7 @@ class Bar:
 
     # Get the next chord, regardless of which beat it is in
     # Skips empty beats
-    def getNextChord(self, chord):
+    def getNextChord(self, chord : Chord) -> Chord:
 
         index = self.chords.index(chord)
         if index >= len(self.chords) - 1:
@@ -97,7 +97,7 @@ class Bar:
         if chord.length == 2 or chord.length == 3:
             newLength = 1
 
-        newChord = Chord(-1, newLength, chord.y + 5, True)
+        newChord = Chord(-1, newLength, chord.y + 5)
         self.chords.insert(index + 1, newChord)
 
         return newChord

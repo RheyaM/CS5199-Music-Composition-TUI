@@ -12,10 +12,7 @@ file whenever the score is saved.
 
 To save to a different file, use 'S'. This will bring
 up the filename textbox. Use ^G to finish writing, and
-^H to backspace*
-
-*Following curses' backspacing convention, but this 
-will be altered to use regular backspace.
+^Del to backspace
 
 ######################################################
 

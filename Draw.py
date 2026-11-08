@@ -8,7 +8,7 @@ class Draw:
     hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes" , "Opt-Up/Down": "transpose by 1", 
              "SHIFT-Up/Down": "transpose by an octave", "SHIFT-Left/Right": "swap notes", 
              "[": "decrease note length", "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
-             "n": "natural"}
+             "n": "natural", "p" : "Play score"}
 
     def drawTreble(pad, x, y):
         pad.addstr(x, y, "|\\")
@@ -37,7 +37,6 @@ class Draw:
 
         Draw.drawTreble(pad, 3, 4)
         Draw.drawTimeSig(pad, 6, 10, "4", "4")
-
     
     def drawTimeSig(pad, x, y, num, dom):
         pad.addstr(x, y, num)

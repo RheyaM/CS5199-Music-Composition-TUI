@@ -17,8 +17,6 @@ from Playback import Playback
 # TODO: if navigateToNote() always comes after drawChord then just put it in drawChord
 # TODO: be able to display key
 
-prevStack : list[str] = ["B:4.|r1rrr|rrrr|"]
-
 file : str = ""
 
 note_dict : dict = {"c": 13, "d": 12, "e": 11, "f": 10, "g": 9, "a": 8, "b": 7}
@@ -34,6 +32,9 @@ visible : list[int] = [] # Indexes of pads which are currently fully visible in 
 current_bar : int = 0 # Index of current bar object in score[]
 current_chord : Chord = score[0].chords[0] # Chord object
 current_note : Note = current_chord.notes[0] # Note object
+
+# prevStack = for each change to the score, store the string representation and the current bar, chord and note
+prevStack : list[[str, int, Chord, Note]] = [["B:4.|r1rrr|rrrr|", current_bar, current_chord, current_note]]
 
 # stave_height - going to restrict how many octaves we can use
 stave_height : int = 15
@@ -66,6 +67,7 @@ def main(stdscr : curses.window) -> None:
     while True:
 
         char : chr = stdscr.getkey()
+        changeMade = True
 
         match char:
             case "q":
@@ -80,9 +82,11 @@ def main(stdscr : curses.window) -> None:
 
             case "KEY_UP" | "KEY_DOWN":
                 verticalNavigation(stave_pad, char)
+                changeMade = False
 
             case "KEY_RIGHT" | "KEY_LEFT":
                 horizontalNavigation(char)
+                changeMade = False
 
             case "kDN5" | ",":
                 transpose("down", stave_pad, 1)
@@ -125,19 +129,24 @@ def main(stdscr : curses.window) -> None:
 
             case "s":
                 save(stdscr, textbox)
+                changeMade = False
 
             case "S":
                 saveAs(stdscr, textbox)
+                changeMade = False
 
             case "p":
                 playPad = playAudio(score, file.replace(".txt", ""))
+                changeMade = False
 
             case "v":
                 Playback.stopAudio()
                 playPad = None
+                changeMade = False
 
             case "l" | "L":
                 load(stdscr)
+                changeMade = False
 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -145,6 +154,8 @@ def main(stdscr : curses.window) -> None:
                 redoAllPads(score)
                 drawEntireScore()
                 navigateToNote()
+
+                changeMade = False
 
 
             case _:
@@ -155,7 +166,11 @@ def main(stdscr : curses.window) -> None:
                     stave_pad.addstr(0, 0, char)
 
         # refresh the textbox
-        change_to_score(textbox, Representation.scoreToString(score, beats))
+        if changeMade:
+            change_to_score(textbox, Representation.scoreToString(score, beats))
+
+        if changeMade or char == "KEY_RESIZE" or char == "l":
+            refreshTextbox(textbox)
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
@@ -171,20 +186,23 @@ def main(stdscr : curses.window) -> None:
 
         open("keylog.txt", "a").write("\n" + char)
 
-def change_to_score(textbox : curses.window, new_string : str) -> None:
-    """When a change is made to the score, update the string textbox and the stack of previous strings"""
-    global prevStack
-
+def refreshTextbox(textbox):
     textbox.clear()
     textbox.addstr(1, 0, Representation.scoreToString(score, beats))
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
 
+def change_to_score(new_string : str) -> None:
+    """Update the string textbox and the stack of previous strings"""
+    global prevStack
+
     # update prevStack, keep the latest 10 changes
-    prevStack.append(new_string)
+    prevStack.append([new_string, current_bar, current_chord, current_note])
     prevStack = prevStack[-10:]
 
 # TODO: cut the chords of the current bar to only play from current_chord
 def playAudio(score : list[Bar], file : str) -> curses.window:
+    """Extract the sublist of score to play, then pass to Playback class"""
+
     playPad : curses.window = curses.newpad(4, 20)
     playPad.addstr(1, 1, "Playing... 'v' to Pause")
 
@@ -270,7 +288,7 @@ def refreshVisiblePads(stdscr : curses.window) -> None:
             stdscr.clrtoeol()
 
 
-def load(stdscr) -> None:
+def load(stdscr : curses.window) -> None:
     global file
     global score
     global current_bar
@@ -794,7 +812,7 @@ def transpose(direction, stave_pad, change):
         #     return
 
         # If new pitch is outside valid stave height
-        if newPitch < 0 or newPitch > stave_height:
+        if newPitch < 0 or newPitch >= stave_height:
             return
 
         current_chord.removeNote(current_note)
@@ -958,7 +976,7 @@ def drawBar(barIndex):
 
         length = end_y - start_y - 1
 
-        for i in range(0, stave_height):
+        for i in range(0, stave_height - 1):
             pad.addstr(i, start_y, " " * (length + 2))
 
         pad.addstr(3, start_y, "┰" + ("\u2500" * length) + "\u2512")

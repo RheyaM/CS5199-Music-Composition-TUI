@@ -2,7 +2,7 @@ from Objects.Note import Note
 
 # TODO set rest based on pitch instead?
 class Chord:
-    def __init__(self, pitch, length, y, rest=False):
+    def __init__(self, pitch, length, y):
         self.y = y
         self.length = length
         self.notes = [Note(pitch)]
@@ -12,11 +12,11 @@ class Chord:
         if pitch == -1:
             self.rest = True
         else:
-            self.rest = rest
+            self.rest = False
 
         self.tie = False
 
-    def addNote(self, pitch):
+    def addNote(self, pitch : int) -> Note:
         if self.rest:
             self.notes = []
             self.rest = False
@@ -27,7 +27,7 @@ class Chord:
 
         return newNote
 
-    def removeNote(self, note):
+    def removeNote(self, note : Note) -> Note:
         if self.rest:
             return
 
@@ -41,20 +41,22 @@ class Chord:
 
         return self.notes[index - 1 if index > 0 else 0]
 
-    def toggleStaccato(self):
+    def toggleStaccato(self) -> None:
         self.staccato = not self.staccato
 
-    def toggleAccent(self):
+    def toggleAccent(self) -> None:
         self.accent = not self.accent
 
-    def replaceChord(self, pitch):
+    def replaceChord(self, pitch : int) -> Note:
         self.notes = [Note(pitch)]
         self.staccato = False
         self.accent = False
 
         return self.notes[0]
 
-    def getOtherNote(self, note, change):
+    def getOtherNote(self, note : Note, change : int) -> Note:
+        """Get the next note in a chord in the given direction"""
+
         current_index = self.notes.index(note)
         new_index = current_index + change
 
@@ -67,7 +69,7 @@ class Chord:
         self.y += change
 
     def duplicateChord(self):
-        newChord = Chord(-1, self.length, self.y)
+        newChord : Chord = Chord(-1, self.length, self.y)
         newChord.notes = []
 
         for note in self.notes:
@@ -75,12 +77,5 @@ class Chord:
 
         newChord.staccato = self.staccato
         newChord.accent = self.accent
-        newChord.rest = self.rest
 
         return newChord
-
-    # TODO: refactor? 
-    def ignoreChord(self):
-        if len(self.notes) == 1 and self.notes[0].pitch == -2:
-            return True
-        return False
