@@ -49,8 +49,6 @@ def main(stdscr : curses.window) -> None:
     global stdscr_height
     global prevStack
 
-    
-
     stdscr_height, stdscr_width = stdscr.getmaxyx()
     
     setUpTUI(stdscr)
@@ -164,7 +162,6 @@ def main(stdscr : curses.window) -> None:
 
                 changeMade = False
 
-
             case _:
                 if char in all_notes:
                     parseNote(stave_pad, char)
@@ -194,7 +191,8 @@ def main(stdscr : curses.window) -> None:
 
         open("keylog.txt", "a").write("\n" + char)
 
-def undo(prevStack):
+def undo(prevStack : list[str, int, int, int]):
+    """Revert to the previous state, including current bar, chord and note"""
     global current_bar
     global current_chord
     global current_note
@@ -211,12 +209,8 @@ def undo(prevStack):
     current_chord = score[bar_index].chords[chord_index]
     current_note = current_chord.notes[note_index]
 
-    open("log.txt", "a").write("\npads before shift: " + str(pads))
-
     redoAllPads(score)
     shiftVisible(visible, score[current_bar].pad)
-
-    open("log.txt", "a").write("\npads after shift: " + str(pads))
 
     drawEntireScore()
     navigateToNote()
@@ -228,8 +222,8 @@ def change_to_score(prevStack : list[str, int, int, int], new_string : str) -> N
     """Update the string textbox and the stack of previous strings"""
 
     # update prevStack, keep the latest 10 changes
-    current_chord_index = score[current_bar].chords.index(current_chord)
-    current_note_index = score[current_bar].chords[current_chord_index].notes.index(current_note)
+    current_chord_index : int = score[current_bar].chords.index(current_chord)
+    current_note_index : int = score[current_bar].chords[current_chord_index].notes.index(current_note)
 
     prevStack.append([new_string, current_bar, current_chord_index, current_note_index])
     prevStack = prevStack[-10:]
@@ -243,14 +237,13 @@ def playAudio(score : list[Bar], file : str) -> curses.window:
     playPad : curses.window = curses.newpad(4, 20)
     playPad.addstr(1, 1, "Playing... 'v' to Pause")
 
-
     subscore : list[Bar] = score[current_bar::]
     Playback.createAudio(subscore, file)
 
     return playPad
 
 def setUpTUI(stdscr: curses.window) -> None:
-
+    """Set up curses, stdscr, and the stave pads"""
     curses.use_default_colors()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_CYAN)
     curses.init_pair(2, curses.COLOR_WHITE, -1)
@@ -264,24 +257,25 @@ def setUpTUI(stdscr: curses.window) -> None:
     stdscr.refresh()
     pads.append(stave_pad)
     
-    # Adding the empty stave to the pad
     drawEntireScore()
     navigateToNote()
     
 def setUpTextbox() -> curses.window:
+    """Set up the textbox for the string representation of the score"""
     textbox : curses.window = curses.newpad(3, stdscr_width)
     textbox.addstr(1, 0, Representation.scoreToString(score, beats))
 
     return textbox
 
 def setUpHints() -> curses.window:
+    """Set up the pad for hints at the bottom of the TUI"""
     hints : curses.window = curses.newpad(3, 300)
     Draw.drawHints(hints, stdscr_width)
     
     return hints
 
-# Shifting the visible pads based on the current pad
 def shiftVisible(visible : list[int], currentPadIndex : int) -> list[int]:
+    """Shifting the visible pads so the current pad is visible"""
 
     # If the current pad is already visible
     if currentPadIndex in visible:
@@ -289,14 +283,14 @@ def shiftVisible(visible : list[int], currentPadIndex : int) -> list[int]:
 
     if currentPadIndex < visible[0]:
         toRemove : int = -1
-        dir = -1
+        dir : int = -1
     else:
         toRemove : int = 0
-        dir = 1
+        dir : int = 1
 
     while currentPadIndex not in visible:
 
-        to_compare = visible[0 if toRemove == -1 else -1]
+        to_compare : int = visible[0 if toRemove == -1 else -1]
 
         # Add the new pad to the visible pads
         visible.append(to_compare + dir)
@@ -307,19 +301,20 @@ def shiftVisible(visible : list[int], currentPadIndex : int) -> list[int]:
             visible.pop(toRemove)
 
 def refreshVisiblePads(stdscr : curses.window) -> None:
+    """Refreshing pads based on visible pads"""
 
     x : int = 1
 
     # Refresh all visible staves
     for index in visible:
-        pad = pads[index]
+        pad : curses.window = pads[index]
         pad.refresh(0, 0, x, 1, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
 
         x += stave_height
 
     # If there is space for a partly visible stave
     if x < stdscr_height - 5 and visible[-1] <= len(pads) - 2:
-        pad = pads[visible[-1] + 1]
+        pad : curses.window = pads[visible[-1] + 1]
         pad.refresh(0, 0, x, 1, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
 
     else:
@@ -328,6 +323,7 @@ def refreshVisiblePads(stdscr : curses.window) -> None:
             stdscr.clrtoeol()
 
 def load(stdscr : curses.window) -> None:
+    """Loading a new score"""
     global file
     global score
     global current_bar
@@ -362,7 +358,6 @@ def load(stdscr : curses.window) -> None:
     except FileNotFoundError as e:
         open("log.txt", "a").write("\n" + str(e))
 
-
     current_bar = 0
     current_chord = score[current_bar].chords[0]
     current_note = current_chord.notes[0]
@@ -377,6 +372,7 @@ def load(stdscr : curses.window) -> None:
     refreshVisiblePads(stdscr)
 
 def save(stdscr : curses.window, textbox : curses.window) -> None:
+    """Save the current score to the current file name"""
     if file != "":
         with open(file, "a") as myfile:
             myfile.write("\n" + textbox.instr(1, 0).decode("utf-8"))
@@ -386,7 +382,7 @@ def save(stdscr : curses.window, textbox : curses.window) -> None:
         saveAs(stdscr, textbox)
 
 def saveAs(stdscr : curses.window, textbox : curses.window) -> None:
-    open("log.txt", "a").write("\nIn saveAs")
+    """Save the score to a given file name"""
     global file
 
     stdscr.clear()
