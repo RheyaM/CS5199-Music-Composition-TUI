@@ -16,6 +16,7 @@ class Bar:
         self.pad = 0
 
     def shiftBar(self, change):
+
         self.y += change
         self.endy += change
         
@@ -73,7 +74,7 @@ class Bar:
 
             chord = self.getNextChord(chord)
 
-        self.endy = y
+        self.endy = y - 2
 
         return self.endy
 

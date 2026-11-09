@@ -34,7 +34,7 @@ current_chord : Chord = score[0].chords[0] # Chord object
 current_note : Note = current_chord.notes[0] # Note object
 
 # prevStack = for each change to the score, store the string representation and the current bar, chord and note
-prevStack : list[[str, int, Chord, Note]] = [["B:4.|r1rrr|rrrr|", current_bar, current_chord, current_note]]
+prevStack : list[[str, int, int, int]] = [["B:4.|r1rrr|rrrr|", current_bar, 0, 0]]
 
 # stave_height - going to restrict how many octaves we can use
 stave_height : int = 15
@@ -47,6 +47,9 @@ stdscr_height : int = 0
 def main(stdscr : curses.window) -> None:
     global stdscr_width
     global stdscr_height
+    global prevStack
+
+    
 
     stdscr_height, stdscr_width = stdscr.getmaxyx()
     
@@ -148,6 +151,10 @@ def main(stdscr : curses.window) -> None:
                 load(stdscr)
                 changeMade = False
 
+            case "z":
+                prevStack = undo(prevStack)
+                changeMade = False
+
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
                 Draw.drawHints(hints, stdscr_width)
@@ -165,12 +172,13 @@ def main(stdscr : curses.window) -> None:
                 else:
                     stave_pad.addstr(0, 0, char)
 
-        # refresh the textbox
+        # if a change was made to the score, the prevStack should be updated
         if changeMade:
-            change_to_score(textbox, Representation.scoreToString(score, beats))
+            prevStack = change_to_score(prevStack, Representation.scoreToString(score, beats))
 
-        if changeMade or char == "KEY_RESIZE" or char == "l":
-            refreshTextbox(textbox)
+        textbox.clear()
+        textbox.addstr(1, 0, Representation.scoreToString(score, beats))
+        textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
@@ -186,18 +194,47 @@ def main(stdscr : curses.window) -> None:
 
         open("keylog.txt", "a").write("\n" + char)
 
-def refreshTextbox(textbox):
-    textbox.clear()
-    textbox.addstr(1, 0, Representation.scoreToString(score, beats))
-    textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
+def undo(prevStack):
+    global current_bar
+    global current_chord
+    global current_note
+    global score
 
-def change_to_score(new_string : str) -> None:
+    if len(prevStack) == 1:
+        return prevStack
+
+    [string, bar_index, chord_index, note_index] = prevStack[-2]
+
+    score = Representation.stringToScore(string)
+
+    current_bar = bar_index
+    current_chord = score[bar_index].chords[chord_index]
+    current_note = current_chord.notes[note_index]
+
+    open("log.txt", "a").write("\npads before shift: " + str(pads))
+
+    redoAllPads(score)
+    shiftVisible(visible, score[current_bar].pad)
+
+    open("log.txt", "a").write("\npads after shift: " + str(pads))
+
+    drawEntireScore()
+    navigateToNote()
+    prevStack.pop(-1)
+
+    return prevStack
+
+def change_to_score(prevStack : list[str, int, int, int], new_string : str) -> None:
     """Update the string textbox and the stack of previous strings"""
-    global prevStack
 
     # update prevStack, keep the latest 10 changes
-    prevStack.append([new_string, current_bar, current_chord, current_note])
+    current_chord_index = score[current_bar].chords.index(current_chord)
+    current_note_index = score[current_bar].chords[current_chord_index].notes.index(current_note)
+
+    prevStack.append([new_string, current_bar, current_chord_index, current_note_index])
     prevStack = prevStack[-10:]
+
+    return prevStack
 
 # TODO: cut the chords of the current bar to only play from current_chord
 def playAudio(score : list[Bar], file : str) -> curses.window:
@@ -231,7 +268,6 @@ def setUpTUI(stdscr: curses.window) -> None:
     drawEntireScore()
     navigateToNote()
     
-
 def setUpTextbox() -> curses.window:
     textbox : curses.window = curses.newpad(3, stdscr_width)
     textbox.addstr(1, 0, Representation.scoreToString(score, beats))
@@ -253,18 +289,22 @@ def shiftVisible(visible : list[int], currentPadIndex : int) -> list[int]:
 
     if currentPadIndex < visible[0]:
         toRemove : int = -1
+        dir = -1
     else:
         toRemove : int = 0
+        dir = 1
 
-    # Add the new pad to the visible pads
-    visible.append(currentPadIndex)
-    visible.sort()
+    while currentPadIndex not in visible:
 
-    # If there are too many visible pads for the current stave_height, remove one
-    if len(visible) > (stdscr_height - 6)/stave_height:
-        visible.pop(toRemove)
+        to_compare = visible[0 if toRemove == -1 else -1]
 
-    return visible
+        # Add the new pad to the visible pads
+        visible.append(to_compare + dir)
+        visible.sort()
+
+        # If there are too many visible pads for the current stave_height, remove one
+        if len(visible) > (stdscr_height - 6)/stave_height:
+            visible.pop(toRemove)
 
 def refreshVisiblePads(stdscr : curses.window) -> None:
 
@@ -286,7 +326,6 @@ def refreshVisiblePads(stdscr : curses.window) -> None:
         for i in range(x, stdscr_height - 6):
             stdscr.move(i, 0)
             stdscr.clrtoeol()
-
 
 def load(stdscr : curses.window) -> None:
     global file
@@ -337,17 +376,7 @@ def load(stdscr : curses.window) -> None:
 
     refreshVisiblePads(stdscr)
 
-
-
 def save(stdscr : curses.window, textbox : curses.window) -> None:
-
-    # Writing the stave itself to the .txt file:
-    # for pad in pads:
-    #     [y, x] = pad.getmaxyx()
-    #     with open("test.txt", "a") as myfile:
-    #         for i in range(y):
-    #             myfile.write("\n" + pad.instr(i, 0).decode("utf-8"))
-
     if file != "":
         with open(file, "a") as myfile:
             myfile.write("\n" + textbox.instr(1, 0).decode("utf-8"))
@@ -425,10 +454,9 @@ def shift(pad : curses.window, dir : str):
         navigateToNote()
 
 # Redo all y values of every bar, beat and chord to get true y values
-# TODO: only redoes ys from the changed bar
+# TODO: only redo ys from the changed bar
 def redoAllPads(score):
     global pads
-    open("log.txt", "a").write("\nredoAllPads()")
 
     end_y = 11
     currentPad = 0
@@ -438,7 +466,6 @@ def redoAllPads(score):
         # If the bar doesn't start where the previous ended, shift it left/right
         if bar.y != end_y and bar.pad == currentPad:
             bar.shiftBar(end_y - bar.y)
-            
 
         # If the bar is overflowing, update its pad, y, and endy values
         if bar.endy >= stdscr_width - 3:
@@ -453,9 +480,10 @@ def redoAllPads(score):
             for b in score[index + 1 ::]:
                 b.pad += 1
 
-
         currentPad = bar.pad
         end_y = bar.endy
+
+    pads = pads[:currentPad + 1]
 
 def shiftElementsRight(change):
     open("log.txt", "a").write("\nIn shiftElementsRight. Change:" + str(change))
@@ -625,7 +653,6 @@ def splitChord(chord : Chord) -> list[Chord]:
 
     return chords
 
-
 def getCurrentPad():
     return pads[score[current_bar].pad]
 
@@ -681,7 +708,6 @@ def navigateAwayFrom():
             pad.chgat(x, y, 2, curses.color_pair(2))    
 
 def navigateToNote():
-    open("log.txt", "a").write("\nIn navigateToNote()")
 
     pad = getCurrentPad()
     [x, y] = getCurrentCoords()
@@ -737,6 +763,9 @@ def horizontalNavigation(dir):
         else:
             drawBar(-1)
 
+        change_to_score(prevStack, Representation.scoreToString(score, beats))
+
+
     shiftVisible(visible, score[current_bar].pad)
     navigateToNote()
 
@@ -758,7 +787,6 @@ def moveLeft(barIndex : int, chord : Chord) -> list[int, Chord]:
     # If not, return None
     return [None, None]
 
-
 # Given a bar and chord, return the next chord along, regardless of which bar it's in
 # Ignores empty beats
 def moveRight(barIndex : int, chord : Chord) -> list[int, Chord]:
@@ -775,7 +803,6 @@ def moveRight(barIndex : int, chord : Chord) -> list[int, Chord]:
     
     # If not, return None
     return [None, None]
-    
 
 # Cursor navigation vertically (within a chord)
 def verticalNavigation(pad, dir):
@@ -953,7 +980,6 @@ def drawChordAttributes(pad, chord, lastNote, dir):
         current_coord = current_coord + dir
     if chord.accent:
         pad.addstr(current_coord, chord.y, ">")
-
 
 def draw_bars_from(barIndex):
     """Alternative to drawBar, draw all bars starting from score[barIndex]."""

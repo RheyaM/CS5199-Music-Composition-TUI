@@ -6,6 +6,7 @@ from Objects.Note import Note
 class Representation:
 
     note_dict = {"c": 13, "d": 12, "e": 11, "f": 10, "g": 9, "a": 8, "b": 7}
+    pitch_dict = {13 : "c", 12: "d", 11: "e", 10: "f", 9: "g", 8: "a", 7: "b"}
 
     current_length = 0
     
@@ -53,25 +54,24 @@ class Representation:
         if pitch == -1:
             return "r"
 
-        pitch_dict = {11 : "c", 10: "d", 9: "e", 8: "f", 7: "g", 6: "a", 5: "b"}
 
-        if pitch in pitch_dict.keys():
-            return pitch_dict[pitch]
+        if pitch in Representation.pitch_dict.keys():
+            return Representation.pitch_dict[pitch]
 
         else:
             dir = 0
 
-            while pitch < 5:
+            while pitch < 7:
                 pitch += 7
                 dir += 1
                 char = "'"
 
-            while pitch > 11:
+            while pitch > 13:
                 pitch -= 7
                 dir += 1
                 char = ","
 
-            note = pitch_dict[pitch] + (char * dir)
+            note = Representation.pitch_dict[pitch] + (char * dir)
 
             return note
 
