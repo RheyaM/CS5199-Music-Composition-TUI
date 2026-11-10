@@ -245,3 +245,48 @@ class Representation:
 
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]
+
+    def scoreToLilypond(score : list[Bar]):
+        string = ""
+        for bar in score:
+            for chord in bar.chords:
+                
+                chordstr = ""
+                for note in chord.notes:
+                    notestr = Representation.pitchToNote(note.pitch)
+
+                    if note.sharp:
+                        notestr = notestr[0] + "is" + notestr[1::]
+                    elif note.flat:
+                        notestr = notestr[0] + "es" + notestr[1::]
+                    elif note.natural:
+                        notestr = notestr[0] + "n" + notestr[1::]
+
+                    chordstr += notestr
+                    chordstr += " "
+
+                if len(chord.notes) > 1:
+                    chordstr = "<" + chordstr + ">"
+
+                # Convert to lilypond length convention
+                if chord.length < 1:
+                    lilypond_length = int((1 / chord.length) * 4)
+
+                elif chord.length == 1:
+                    lilypond_length = 4
+
+                elif chord.length == 4:
+                    lilypond_length = 1
+
+                else:
+                    lilypond_length = chord.length
+                
+
+                if lilypond_length != Representation.current_length:
+                    chordstr += str(lilypond_length)
+                    Representation.current_length = lilypond_length
+
+                string += chordstr
+
+        return "\\version \"2.26.0\"{ \\fixed c' {" + string + "}}"
+                

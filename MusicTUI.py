@@ -3,6 +3,8 @@ import curses
 from curses import wrapper
 from curses.textpad import Textbox, rectangle
 
+import subprocess
+
 """Importing math module for logs"""
 import math
 
@@ -49,7 +51,12 @@ def main(stdscr : curses.window) -> None:
     global stdscr_height
     global prevStack
 
+
     stdscr_height, stdscr_width = stdscr.getmaxyx()
+
+    # TODO: exit with verbose exception if screen size not large enough
+    if stdscr_height < 20:
+        pass
     
     setUpTUI(stdscr)
 
@@ -153,6 +160,10 @@ def main(stdscr : curses.window) -> None:
                 prevStack = undo(prevStack)
                 changeMade = False
 
+            case "m":
+                exportToLilypond(score)
+                changeMade = False
+
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
                 Draw.drawHints(hints, stdscr_width)
@@ -190,6 +201,15 @@ def main(stdscr : curses.window) -> None:
         stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
+
+def exportToLilypond(score):
+    string = Representation.scoreToLilypond(score)
+    with open("lilypond.ly", "a") as myfile:
+        myfile.write(string)
+    myfile.close
+
+    subprocess.call(["sh", "./makeLilypond.sh"])
+
 
 def undo(prevStack : list[str, int, int, int]):
     """Revert to the previous state, including current bar, chord and note"""
