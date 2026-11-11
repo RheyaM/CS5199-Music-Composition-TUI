@@ -44,6 +44,8 @@ stave_height : int = 15
 stdscr_width : int = 0
 stdscr_height : int = 0
 
+clipboard = None
+
 # TODO: allow higher/lower notes past the stave
 
 def main(stdscr : curses.window) -> None:
@@ -164,6 +166,9 @@ def main(stdscr : curses.window) -> None:
                 exportToLilypond(score)
                 changeMade = False
 
+            case "t":
+                changeTimeSignature(3)
+
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
                 Draw.drawHints(hints, stdscr_width)
@@ -201,6 +206,79 @@ def main(stdscr : curses.window) -> None:
         stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
+
+# Making a long list of chords
+# TODO: account for change in beats when undoing
+def changeTimeSignature(new_beats):
+    global score
+    global beats
+    global current_note
+    global current_chord
+    global current_bar
+
+    chordList = []
+    for bar in score:
+        for chord in bar.chords:
+            chordList.append(chord)
+
+    new_score = [Bar(0, new_beats)]
+    new_score[0].emptyBar()
+    bar_index = 0
+
+    while len(chordList) > 0:
+        chord = chordList[0]
+
+        # Create a new bar if needed
+        if bar_index == len(new_score):
+            new_score.append(Bar(0, new_beats))
+            new_score[-1].emptyBar()
+
+        bar = new_score[bar_index]
+        bar.chords.append(chord)
+
+        # If the bar length exceeds new_beats
+        if bar.total_length() > new_beats:
+            remainder = bar.total_length() - new_beats
+            new_chord = chord.duplicateChord()
+            new_chord.length = remainder
+            chords_to_add = splitChord(new_chord)
+
+            for c in chords_to_add[:-2]:
+                c.tie = True
+
+            # TODO: is it possible for chord.length to be invalid? i.e. 1.5 length
+            chord.length -= remainder
+            chord.tie = True
+            chordList = chordList[:1] + chords_to_add + chordList[1:]
+
+        # A bar that exceeded length will have the correct length by this point
+        if bar.total_length() == new_beats:
+            bar_index += 1
+
+        chordList.pop(0)
+
+    # If the last bar needs to be lengthened with rests
+    if bar.total_length() < new_beats:
+        new_chord = Chord(-1, new_beats - bar.total_length(), 0)
+        rests_to_add = splitChord(new_chord)
+        bar.chords = bar.chords + rests_to_add
+
+
+    for bar in new_score:
+        bar.redoY()
+
+    redoAllPads(new_score)
+
+    beats = new_beats
+
+    score = new_score
+    current_bar = 0
+    current_chord = score[current_bar].chords[0]
+    current_note = current_chord.notes[0]
+
+    drawEntireScore()
+    navigateToNote()
+
 
 def exportToLilypond(score : list[Bar]) -> None:
     """Calling the makeLilypond shell script to compile a pdf of the current score"""
@@ -934,7 +1012,7 @@ def drawChord(pad, chord):
     y = chord.y
 
     Draw.emptyStaveRegion(pad, y)
-
+    
     if not chord.rest:
         noteCoords = Draw.drawNotes(pad, chord)
         drawStem(pad, chord, noteCoords)
@@ -1043,7 +1121,7 @@ def drawBar(barIndex):
             drawChord(pad, chord)
 
         if barIndex == 0:
-            Draw.drawBeginning(pad)
+            Draw.drawBeginning(pad, beats)
 
         # If a bar is the last on its pad, or the last in score, remove any further characters
         if (barIndex < len(score) - 1 and score[barIndex + 1].pad > score[barIndex].pad) or barIndex == len(score) - 1:

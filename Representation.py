@@ -259,8 +259,6 @@ class Representation:
                         notestr = notestr[0] + "is" + notestr[1::]
                     elif note.flat:
                         notestr = notestr[0] + "es" + notestr[1::]
-                    elif note.natural:
-                        notestr = notestr[0] + "n" + notestr[1::]
 
                     chordstr += notestr
 

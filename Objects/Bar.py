@@ -4,7 +4,7 @@ class Bar:
         # y coord of start of bar
         self.y = y
 
-        self.endy = y + 26
+        self.endy = y + 2 + (6 * beats)
 
         # list of Chord objects in the bar
         self.chords = []
@@ -24,8 +24,7 @@ class Bar:
             chord.shiftChord(change)
 
 
-    # Get the next chord, regardless of which beat it is in
-    # Skips empty beats
+    # Get the next chord within the current bar
     def getNextChord(self, chord : Chord) -> Chord:
 
         index = self.chords.index(chord)
@@ -70,7 +69,7 @@ class Bar:
                 y += 6
 
             elif chord.length < 1:
-                y += 4
+                y += 5
 
             chord = self.getNextChord(chord)
 
@@ -78,14 +77,14 @@ class Bar:
 
         return self.endy
 
-    def emptyBar(self):
+    def emptyBar(self) -> None:
         self.chords = []
 
     # Returns the beat index and chord object of the last chord in the Bar
-    def getLastChord(self):
+    def getLastChord(self) -> Chord:
         return self.chords[-1]
 
-    def halfChord(self, chord):
+    def halfChord(self, chord) -> Chord:
         index = self.chords.index(chord)
 
         if chord.length == 4 or chord.length == 3:
@@ -102,3 +101,11 @@ class Bar:
         self.chords.insert(index + 1, newChord)
 
         return newChord
+
+    def total_length(self) -> float:
+        total : float = 0
+
+        for chord in self.chords:
+            total += chord.length
+
+        return total

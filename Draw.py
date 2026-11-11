@@ -23,7 +23,7 @@ class Draw:
         pad.addstr(x + 9, y, "|")
         pad.addstr(x + 10, y - 1, "◯|")
 
-    def drawBeginning(pad):
+    def drawBeginning(pad, beats):
 
         pad.addstr(3, 0, "\u250E" + ("\u2500" * 11))
 
@@ -36,7 +36,7 @@ class Draw:
         pad.addstr(11, 0, "\u2516" + ("\u2500" * 11))
 
         Draw.drawTreble(pad, 3, 4)
-        Draw.drawTimeSig(pad, 6, 10, "4", "4")
+        Draw.drawTimeSig(pad, 6, 10, str(beats), "4")
     
     def drawTimeSig(pad, x, y, num, dom):
         pad.addstr(x, y, num)
@@ -82,6 +82,7 @@ class Draw:
             else:
                 string = "\u26AA"
 
+            # open("log.txt", "a").write("\nnote.pitch: " + str(note.pitch) + ". y: " + str(y))
             pad.addstr(note.pitch, y, string, curses.color_pair(2))
             Draw.drawAttributes(pad, note, chord)
 
