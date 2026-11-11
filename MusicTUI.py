@@ -202,13 +202,20 @@ def main(stdscr : curses.window) -> None:
 
         open("keylog.txt", "a").write("\n" + char)
 
-def exportToLilypond(score):
+def exportToLilypond(score : list[Bar]) -> None:
+    """Calling the makeLilypond shell script to compile a pdf of the current score"""
+
     string = Representation.scoreToLilypond(score)
-    with open("lilypond.ly", "a") as myfile:
+    if file == "":
+        lilypond_file = "Untitled.ly"
+    else:
+        lilypond_file = file.replace(".txt", "") + ".ly"
+
+    with open(lilypond_file, "w") as myfile:
         myfile.write(string)
     myfile.close
 
-    subprocess.call(["sh", "./makeLilypond.sh"])
+    subprocess.call(["sh", "./makeLilypond.sh", lilypond_file])
 
 
 def undo(prevStack : list[str, int, int, int]):
@@ -371,7 +378,7 @@ def load(stdscr : curses.window) -> None:
             string = myfile.read().replace("\n", "").replace(" ", "")
         myfile.close()
 
-        file = text
+        file = text #Will include .txt
 
         score = Representation.stringToScore(string)
 

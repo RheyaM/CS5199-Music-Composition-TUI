@@ -263,7 +263,6 @@ class Representation:
                         notestr = notestr[0] + "n" + notestr[1::]
 
                     chordstr += notestr
-                    chordstr += " "
 
                 if len(chord.notes) > 1:
                     chordstr = "<" + chordstr + ">"
@@ -286,7 +285,7 @@ class Representation:
                     chordstr += str(lilypond_length)
                     Representation.current_length = lilypond_length
 
-                string += chordstr
+                string += chordstr + " "
 
         return "\\version \"2.26.0\"{ \\fixed c' {" + string + "}}"
                 
