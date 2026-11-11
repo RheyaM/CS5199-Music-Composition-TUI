@@ -260,7 +260,7 @@ class Representation:
                     elif note.flat:
                         notestr = notestr[0] + "es" + notestr[1::]
 
-                    chordstr += notestr
+                    chordstr += notestr + " "
 
                 if len(chord.notes) > 1:
                     chordstr = "<" + chordstr + ">"

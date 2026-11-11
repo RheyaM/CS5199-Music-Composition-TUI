@@ -357,7 +357,7 @@ def setUpTUI(stdscr: curses.window) -> None:
     stdscr.clear()
     
     # Creating and adding the first stave pad to the screen
-    stave_pad : curses.window = curses.newpad(15, 300)
+    stave_pad : curses.window = curses.newpad(20, 300)
 
     stdscr.refresh()
     pads.append(stave_pad)
@@ -574,7 +574,7 @@ def redoAllPads(score):
             bar.shiftBar(bar.y * -1)
 
             if bar.pad >= len(pads):
-                pads.append(curses.newpad(14, 300))
+                pads.append(curses.newpad(20, 300))
 
             # Update pad value of all bars that come after
             index = score.index(bar)
@@ -1012,7 +1012,7 @@ def drawChord(pad, chord):
     y = chord.y
 
     Draw.emptyStaveRegion(pad, y)
-    
+
     if not chord.rest:
         noteCoords = Draw.drawNotes(pad, chord)
         drawStem(pad, chord, noteCoords)
