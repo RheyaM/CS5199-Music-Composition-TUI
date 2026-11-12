@@ -246,8 +246,13 @@ class Representation:
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]
 
-    def scoreToLilypond(score : list[Bar]):
-        string = ""
+    def scoreToLilypond(score : list[Bar], beats : int):
+        string = "\\version \"2.26.0\"{ \\fixed c' { \\numericTimeSignature "
+
+        string += f"\\time {beats}/4 "
+
+        open("log.txt", "a").write("\n" + str(string))
+        
         for bar in score:
             for chord in bar.chords:
                 
@@ -260,7 +265,7 @@ class Representation:
                     elif note.flat:
                         notestr = notestr[0] + "es" + notestr[1::]
 
-                    chordstr += notestr + " "
+                    chordstr += " " + notestr
 
                 if len(chord.notes) > 1:
                     chordstr = "<" + chordstr + ">"
@@ -275,6 +280,9 @@ class Representation:
                 elif chord.length == 4:
                     lilypond_length = 1
 
+                elif chord.length == 3:
+                    lilypond_length = "2."
+
                 else:
                     lilypond_length = chord.length
                 
@@ -283,7 +291,11 @@ class Representation:
                     chordstr += str(lilypond_length)
                     Representation.current_length = lilypond_length
 
+                if chord.tie:
+                    chordstr += "~"
+
                 string += chordstr + " "
 
-        return "\\version \"2.26.0\"{ \\fixed c' {" + string + "}}"
+
+        return string + "}}"
                 

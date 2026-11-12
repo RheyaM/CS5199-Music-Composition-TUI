@@ -82,7 +82,7 @@ class Draw:
             else:
                 string = "\u26AA"
 
-            # open("log.txt", "a").write("\nnote.pitch: " + str(note.pitch) + ". y: " + str(y))
+            open("log.txt", "a").write("\nnote.pitch: " + str(note.pitch) + ". y: " + str(y))
             pad.addstr(note.pitch, y, string, curses.color_pair(2))
             Draw.drawAttributes(pad, note, chord)
 
@@ -120,10 +120,9 @@ class Draw:
             above = pad.instr(x, y + 1, 3).decode("utf-8")
             
         pad.addstr(linex, y, chars[1] + chars[2])
-            
 
     def emptyStaveRegion(pad, y):
-        for x in range(0, 14):
+        for x in range(0, 15):
             pad.addstr(x, y - 1, "    ")
         for x in range (3, 12, 2):
             pad.addstr(x, y - 1, "────")

@@ -167,7 +167,7 @@ def main(stdscr : curses.window) -> None:
                 changeMade = False
 
             case "t":
-                changeTimeSignature(3)
+                changeTimeSignature(2)
 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -283,7 +283,7 @@ def changeTimeSignature(new_beats):
 def exportToLilypond(score : list[Bar]) -> None:
     """Calling the makeLilypond shell script to compile a pdf of the current score"""
 
-    string = Representation.scoreToLilypond(score)
+    string = Representation.scoreToLilypond(score, beats)
     if file == "":
         lilypond_file = "Untitled.ly"
     else:
