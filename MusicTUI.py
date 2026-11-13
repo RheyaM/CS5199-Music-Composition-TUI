@@ -1,5 +1,6 @@
 """Python module providing screen painting and window creation functionality"""
 import curses
+from cursesmenu import CursesMenu
 from curses import wrapper
 from curses.textpad import Textbox, rectangle
 
@@ -25,6 +26,14 @@ note_dict : dict = {"c": 13, "d": 12, "e": 11, "f": 10, "g": 9, "a": 8, "b": 7}
 all_notes : list[str] = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
 
 beats : int = 4
+
+keys : dict = {"C Major": [], "G Major": ["f#"], "D Major": ["f#", "c#"], 
+               "A Major": ["c#", "f#", "g#"], "E Major": ["f#", "g#", "c#", "d#"],
+               "B Major": ["c#", "d#", "f#", "g#", "a#"], "F# Major": ["f#", "g#", "a#", "c#", "d#", "e#"],
+               "Db Major": ["d-", "e-", "g-", "a-", "b-"], "Ab Major": ["a-", "b-", "d-", "e-"],
+               "Eb Major": ["e-", "a-", "b-"], "Bb Major": ["b-", "e-"], "F Major": ["b-"]}
+
+key : str = "C Major"
 
 # First bar starts at y = 13 and there are 4 beats in a bar
 score : list[Bar] = [Bar(11, beats), Bar(37, beats)]
@@ -169,12 +178,21 @@ def main(stdscr : curses.window) -> None:
             case "t":
                 changeTimeSignature(2)
 
-            case "KEY_RESIZE":
-                stdscr_height, stdscr_width = stdscr.getmaxyx()
-                Draw.drawHints(hints, stdscr_width)
-                redoAllPads(score)
+            case "k":
+                open("log.txt", "a").write("\ni" + createMenu(stdscr))
                 drawEntireScore()
                 navigateToNote()
+                
+
+            case "KEY_RESIZE":
+                stdscr_height, stdscr_width = stdscr.getmaxyx()
+
+                # Provided the terminal size is large enough:
+                if stdscr_width >= 94 and stdscr_height >= 20:
+                    Draw.drawHints(hints, stdscr_width)
+                    redoAllPads(score)
+                    drawEntireScore()
+                    navigateToNote()
 
                 changeMade = False
 
@@ -184,6 +202,13 @@ def main(stdscr : curses.window) -> None:
 
                 else:
                     stave_pad.addstr(0, 0, char)
+
+        # If the terminal is too small, create a 
+        if stdscr_height < 20 or stdscr_width < 94:
+            too_small = curses.newpad(stdscr_height, stdscr_width)
+            too_small.addstr(stdscr_height // 2, (stdscr_width // 2) - 12, "Terminal size too small")
+            too_small.refresh(0, 0, 0, 0, stdscr_height, stdscr_width)
+            continue
 
         # if a change was made to the score, the prevStack should be updated
         if changeMade:
@@ -206,6 +231,33 @@ def main(stdscr : curses.window) -> None:
         stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
+
+def set_curses_modes(stdscr):
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_CYAN)
+    curses.init_pair(2, curses.COLOR_WHITE, -1)
+    curses.curs_set(0)
+    curses.cbreak()
+
+    stdscr.keypad(True)
+
+def createMenu(stdscr):
+
+    a_list=["red", "blue", "green"]
+
+    menu = CursesMenu.make_selection_menu(a_list,"Select an option")
+    menu.should_exit = True
+
+    menu.show()
+
+    menu.join()
+    open("log.txt", "a").write("\na")
+    selection = menu.selected_option
+
+    set_curses_modes(stdscr)
+
+    return a_list[selection]
+
 
 # Making a long list of chords
 # TODO: account for change in beats when undoing
@@ -349,10 +401,8 @@ def playAudio(score : list[Bar], file : str) -> curses.window:
 
 def setUpTUI(stdscr: curses.window) -> None:
     """Set up curses, stdscr, and the stave pads"""
-    curses.use_default_colors()
-    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_CYAN)
-    curses.init_pair(2, curses.COLOR_WHITE, -1)
-    curses.curs_set(0)
+
+    set_curses_modes(stdscr)
 
     stdscr.clear()
     
