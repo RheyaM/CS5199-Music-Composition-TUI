@@ -36,7 +36,7 @@ keys : dict = {"C Major": [], "G Major": ["f#"], "D Major": ["f#", "c#"],
 key : str = "C Major"
 
 # First bar starts at y = 13 and there are 4 beats in a bar
-score : list[Bar] = [Bar(11, beats), Bar(37, beats)]
+score : list[Bar] = [Bar(15, beats), Bar(41, beats)]
 pads : list[curses.window] = []
 visible : list[int] = [] # Indexes of pads which are currently fully visible in pads
 
@@ -61,6 +61,7 @@ def main(stdscr : curses.window) -> None:
     global stdscr_width
     global stdscr_height
     global prevStack
+    global key
 
 
     stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -79,7 +80,7 @@ def main(stdscr : curses.window) -> None:
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
-    stave_pad.refresh(0, 0, 1, 1, stave_height, stdscr_width - 2)
+    stave_pad.refresh(0, 0, 0, 0, stave_height, stdscr_width - 2)
 
     open("keylog.txt", "a").write("\n#####################################")
 
@@ -176,12 +177,12 @@ def main(stdscr : curses.window) -> None:
                 changeMade = False
 
             case "t":
-                changeTimeSignature(2)
+                time_sig = createMenu(stdscr, "time")
+                changeTimeSignature(int(time_sig[0]))
 
             case "k":
-                open("log.txt", "a").write("\ni" + createMenu(stdscr))
+                key = createMenu(stdscr, "key")
                 drawEntireScore()
-                navigateToNote()
                 
 
             case "KEY_RESIZE":
@@ -192,7 +193,6 @@ def main(stdscr : curses.window) -> None:
                     Draw.drawHints(hints, stdscr_width)
                     redoAllPads(score)
                     drawEntireScore()
-                    navigateToNote()
 
                 changeMade = False
 
@@ -241,22 +241,27 @@ def set_curses_modes(stdscr):
 
     stdscr.keypad(True)
 
-def createMenu(stdscr):
+def createMenu(stdscr, opt):
 
-    a_list=["red", "blue", "green"]
+    key_list=["C Major", "G Major", "D Major", "A Major", "E Major", "B Major", "F# Major",
+               "Db Major", "Ab Major", "Eb Major", "Bb Major", "F Major"]
+    time_signature_list = ["2 / 4", "3 / 4", "4 / 4"]
 
-    menu = CursesMenu.make_selection_menu(a_list,"Select an option")
-    menu.should_exit = True
+    if opt == "key":
+        chosen_list = key_list
+    else:
+        chosen_list = time_signature_list
+
+    menu = CursesMenu.make_selection_menu(chosen_list,"Select an option")
+    # menu.should_exit = True
 
     menu.show()
-
     menu.join()
-    open("log.txt", "a").write("\na")
     selection = menu.selected_option
 
     set_curses_modes(stdscr)
 
-    return a_list[selection]
+    return chosen_list[selection]
 
 
 # Making a long list of chords
@@ -329,7 +334,6 @@ def changeTimeSignature(new_beats):
     current_note = current_chord.notes[0]
 
     drawEntireScore()
-    navigateToNote()
 
 
 def exportToLilypond(score : list[Bar]) -> None:
@@ -370,7 +374,6 @@ def undo(prevStack : list[str, int, int, int]):
     shiftVisible(visible, score[current_bar].pad)
 
     drawEntireScore()
-    navigateToNote()
     prevStack.pop(-1)
 
     return prevStack
@@ -413,7 +416,6 @@ def setUpTUI(stdscr: curses.window) -> None:
     pads.append(stave_pad)
     
     drawEntireScore()
-    navigateToNote()
     
 def setUpTextbox() -> curses.window:
     """Set up the textbox for the string representation of the score"""
@@ -458,19 +460,19 @@ def shiftVisible(visible : list[int], currentPadIndex : int) -> list[int]:
 def refreshVisiblePads(stdscr : curses.window) -> None:
     """Refreshing pads based on visible pads"""
 
-    x : int = 1
+    x : int = 0
 
     # Refresh all visible staves
     for index in visible:
         pad : curses.window = pads[index]
-        pad.refresh(0, 0, x, 1, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
+        pad.refresh(0, 0, x, 0, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
 
         x += stave_height
 
     # If there is space for a partly visible stave
     if x < stdscr_height - 5 and visible[-1] <= len(pads) - 2:
         pad : curses.window = pads[visible[-1] + 1]
-        pad.refresh(0, 0, x, 1, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
+        pad.refresh(0, 0, x, 0, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
 
     else:
         for i in range(x, stdscr_height - 6):
@@ -519,7 +521,6 @@ def load(stdscr : curses.window) -> None:
     
     redoAllPads(score)
     drawEntireScore()
-    navigateToNote()
 
     visiblePadsNum = (stdscr_height - 6)//stave_height
     visible = list(range(0, len(pads)))[:visiblePadsNum]
@@ -609,7 +610,7 @@ def shift(pad : curses.window, dir : str):
 def redoAllPads(score):
     global pads
 
-    end_y = 11
+    end_y = 15
     currentPad = 0
 
     for bar in score:
@@ -690,7 +691,6 @@ def decLength():
 
     # drawBar(current_bar)
     drawEntireScore()
-    navigateToNote()
 
 def incLength():
     """Increase the length of the current chord"""
@@ -1171,7 +1171,7 @@ def drawBar(barIndex):
             drawChord(pad, chord)
 
         if barIndex == 0:
-            Draw.drawBeginning(pad, beats)
+            Draw.drawBeginning(pad, beats, key)
 
         # If a bar is the last on its pad, or the last in score, remove any further characters
         if (barIndex < len(score) - 1 and score[barIndex + 1].pad > score[barIndex].pad) or barIndex == len(score) - 1:
@@ -1188,5 +1188,7 @@ def drawEntireScore():
         for chord in bar.chords:
             if chord.tie and not chord.rest:
                 Draw.drawTie(pads[bar.pad], chord)
+
+    navigateToNote()
     
 wrapper(main)

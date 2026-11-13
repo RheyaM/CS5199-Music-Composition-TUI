@@ -3,6 +3,13 @@ import math
 
 from Objects.Chord import Chord
 
+keys : dict = {"C Major": [], "G Major": [3], "D Major": [3, 6], 
+               "A Major": [3, 6, 2], "E Major": [3, 6, 2, 5],
+               "B Major": [3, 6, 2, 5, 8], "F# Major": [3, 6, 2, 5, 8, 4],
+               "Db Major": [7, 4, 8, 5, 9], "Ab Major": [7, 4, 8, 5], 
+               "Eb Major": [7, 4, 8], "Bb Major": [7, 4], "F Major": [7]}
+
+
 class Draw:
 
     hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes" , "Opt-Up/Down": "transpose by 1", 
@@ -23,24 +30,40 @@ class Draw:
         pad.addstr(x + 9, y, "|")
         pad.addstr(x + 10, y - 1, "◯|")
 
-    def drawBeginning(pad, beats):
+    def drawBeginning(pad, beats, key):
 
-        pad.addstr(3, 0, "\u250E" + ("\u2500" * 11))
+        length = 15
+
+        pad.addstr(3, 0, "┎" + ("─" * length))
 
         for i in range(5, 10, 2):
-            pad.addstr(i, 0, "\u2520" + ("\u2500" * 11))
+            pad.addstr(i, 0, "┠" + ("─" * length))
 
         for i in range(4, 11, 2):
-            pad.addstr(i, 0, "\u2503" + (" " * 11))
+            pad.addstr(i, 0, "┃" + (" " * length))
 
-        pad.addstr(11, 0, "\u2516" + ("\u2500" * 11))
+        pad.addstr(11, 0, "┖" + ("─" * length))
 
         Draw.drawTreble(pad, 3, 4)
         Draw.drawTimeSig(pad, 6, 10, str(beats), "4")
+        Draw.draw_key_sig(pad, 12, key)
     
     def drawTimeSig(pad, x, y, num, dom):
         pad.addstr(x, y, num)
         pad.addstr(x + 2, y, dom)
+
+    def draw_key_sig(pad, x, key):
+        if key[1] == "b" or key == "F Major":
+            char = "♭"
+        else:
+            char = "#"
+
+        # dir represents which direction the coordinates of the notes must change
+        start_x = x
+        for sharp in keys[key]:
+            pad.addstr(sharp, start_x, char)
+            start_x += 1
+
 
     def drawRest(pad, chord):
         y = chord.y
