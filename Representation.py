@@ -54,7 +54,6 @@ class Representation:
         if pitch == -1:
             return "r"
 
-
         if pitch in Representation.pitch_dict.keys():
             return Representation.pitch_dict[pitch]
 

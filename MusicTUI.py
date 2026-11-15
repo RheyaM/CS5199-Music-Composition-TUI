@@ -27,12 +27,6 @@ all_notes : list[str] = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", 
 
 beats : int = 4
 
-# keys : dict = {"C Major": [], "G Major": [3], "D Major": [3, 6], 
-#                "A Major": [3, 6, 2], "E Major": [3, 6, 2, 5],
-#                "B Major": [3, 6, 2, 5, 8], "F# Major": [3, 6, 2, 5, 8, 4],
-#                "Db Major": [7, 4, 8, 5, 9], "Ab Major": [7, 4, 8, 5], 
-#                "Eb Major": [7, 4, 8], "Bb Major": [7, 4], "F Major": [7]}
-
 key : str = "C Major"
 
 # First bar starts at y = 13 and there are 4 beats in a bar

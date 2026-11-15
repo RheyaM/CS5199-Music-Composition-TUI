@@ -3,9 +3,14 @@ from Objects.Chord import Chord
 import music
 import pygame
 from pygame import mixer
-from Draw import keys
 
 coordsToPitch = { 0: 0, 1 : -2, 2 : -4, 3 : -5, 4 : -7, 5 : -9, 6 : -10}
+
+keys : dict = {"C Major": [], "G Major": [4], "D Major": [4, 1], 
+               "A Major": [4, 1, 3], "E Major": [4, 7, 3, 6],
+               "B Major": [4, 7, 3, 6, 2], "F# Major": [4, 7, 3, 6, 2, 5],
+               "Db Major": [1, 5, 2, 6, 3], "Ab Major": [1, 5, 2, 6], 
+               "Eb Major": [1, 5, 2], "Bb Major": [1, 5], "F Major": [1]}
 
 
 class Playback:
@@ -79,19 +84,19 @@ class Playback:
 
             dictPitch -= (12 * toMultiply)
 
+      
             if note.sharp:
                 dictPitch += 1
 
             elif note.flat:
                 dictPitch -= 1
 
-            # elif standardised in keys[key]:
-            #     open("log.txt", "a").write("\nStandardised: "+ str(standardised))
+            elif note.pitch - (7 * (note.pitch//7)) in keys[key]:
 
-            #     if key[1] == "b":
-            #         dictPitch -= 1
-            #     else:
-            #         dictPitch += 1
+                if key[1] == "b" or key == "F Major":
+                    dictPitch -= 1
+                else:
+                    dictPitch += 1
 
             xvalues.append(dictPitch)
 
