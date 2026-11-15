@@ -22,16 +22,16 @@ from Playback import Playback
 
 file : str = ""
 
-note_dict : dict = {"c": 13, "d": 12, "e": 11, "f": 10, "g": 9, "a": 8, "b": 7}
+note_dict : dict = {"c": 14, "d": 13, "e": 12, "f": 11, "g": 10, "a": 9, "b": 8}
 all_notes : list[str] = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
 
 beats : int = 4
 
-keys : dict = {"C Major": [], "G Major": ["f#"], "D Major": ["f#", "c#"], 
-               "A Major": ["c#", "f#", "g#"], "E Major": ["f#", "g#", "c#", "d#"],
-               "B Major": ["c#", "d#", "f#", "g#", "a#"], "F# Major": ["f#", "g#", "a#", "c#", "d#", "e#"],
-               "Db Major": ["d-", "e-", "g-", "a-", "b-"], "Ab Major": ["a-", "b-", "d-", "e-"],
-               "Eb Major": ["e-", "a-", "b-"], "Bb Major": ["b-", "e-"], "F Major": ["b-"]}
+# keys : dict = {"C Major": [], "G Major": [3], "D Major": [3, 6], 
+#                "A Major": [3, 6, 2], "E Major": [3, 6, 2, 5],
+#                "B Major": [3, 6, 2, 5, 8], "F# Major": [3, 6, 2, 5, 8, 4],
+#                "Db Major": [7, 4, 8, 5, 9], "Ab Major": [7, 4, 8, 5], 
+#                "Eb Major": [7, 4, 8], "Bb Major": [7, 4], "F Major": [7]}
 
 key : str = "C Major"
 
@@ -48,7 +48,7 @@ current_note : Note = current_chord.notes[0] # Note object
 prevStack : list[[str, int, int, int]] = [["B:4.|r1rrr|rrrr|", current_bar, 0, 0]]
 
 # stave_height - going to restrict how many octaves we can use
-stave_height : int = 15
+stave_height : int = 22
 
 stdscr_width : int = 0
 stdscr_height : int = 0
@@ -62,7 +62,6 @@ def main(stdscr : curses.window) -> None:
     global stdscr_height
     global prevStack
     global key
-
 
     stdscr_height, stdscr_width = stdscr.getmaxyx()
 
@@ -80,7 +79,7 @@ def main(stdscr : curses.window) -> None:
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
-    stave_pad.refresh(0, 0, 0, 0, stave_height, stdscr_width - 2)
+    stave_pad.refresh(2, 0, 0, 0, 14, stdscr_width - 2)
 
     open("keylog.txt", "a").write("\n#####################################")
 
@@ -203,7 +202,7 @@ def main(stdscr : curses.window) -> None:
                 else:
                     stave_pad.addstr(0, 0, char)
 
-        # If the terminal is too small, create a 
+        # If the terminal is too small, create an error message pad
         if stdscr_height < 20 or stdscr_width < 94:
             too_small = curses.newpad(stdscr_height, stdscr_width)
             too_small.addstr(stdscr_height // 2, (stdscr_width // 2) - 12, "Terminal size too small")
@@ -262,7 +261,6 @@ def createMenu(stdscr, opt):
     set_curses_modes(stdscr)
 
     return chosen_list[selection]
-
 
 # Making a long list of chords
 # TODO: account for change in beats when undoing
@@ -335,7 +333,6 @@ def changeTimeSignature(new_beats):
 
     drawEntireScore()
 
-
 def exportToLilypond(score : list[Bar]) -> None:
     """Calling the makeLilypond shell script to compile a pdf of the current score"""
 
@@ -350,7 +347,6 @@ def exportToLilypond(score : list[Bar]) -> None:
     myfile.close
 
     subprocess.call(["sh", "./makeLilypond.sh", lilypond_file])
-
 
 def undo(prevStack : list[str, int, int, int]):
     """Revert to the previous state, including current bar, chord and note"""
@@ -398,7 +394,7 @@ def playAudio(score : list[Bar], file : str) -> curses.window:
     playPad.addstr(1, 1, "Playing... 'v' to Pause")
 
     subscore : list[Bar] = score[current_bar::]
-    Playback.createAudio(subscore, file)
+    Playback.createAudio(subscore, file, key)
 
     return playPad
 
@@ -410,7 +406,7 @@ def setUpTUI(stdscr: curses.window) -> None:
     stdscr.clear()
     
     # Creating and adding the first stave pad to the screen
-    stave_pad : curses.window = curses.newpad(20, 300)
+    stave_pad : curses.window = curses.newpad(22, 300)
 
     stdscr.refresh()
     pads.append(stave_pad)
@@ -465,19 +461,41 @@ def refreshVisiblePads(stdscr : curses.window) -> None:
     # Refresh all visible staves
     for index in visible:
         pad : curses.window = pads[index]
-        pad.refresh(0, 0, x, 0, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
+        [top, bottom] = get_pad_min_max(index)
 
-        x += stave_height
+        pad.refresh(top, 0, x, 0, min(x + (bottom - top) + 1, stdscr_height - 6), stdscr_width - 2)
+        x += (bottom - top)
 
     # If there is space for a partly visible stave
-    if x < stdscr_height - 5 and visible[-1] <= len(pads) - 2:
+    if x < stdscr_height - 6 and visible[-1] <= len(pads) - 2:
         pad : curses.window = pads[visible[-1] + 1]
-        pad.refresh(0, 0, x, 0, min(stave_height + x, stdscr_height - 6), stdscr_width - 2)
+        [top, bottom] = get_pad_min_max(visible[-1] + 1)
+
+        open("log.txt", "a").write("\n" + str(min(x + (bottom - top) + 1, stdscr_height - 6)))
+        pad.refresh(top, 0, x, 0, min(x + (bottom - top) + 1, stdscr_height - 7), stdscr_width - 2)
 
     else:
         for i in range(x, stdscr_height - 6):
             stdscr.move(i, 0)
             stdscr.clrtoeol()
+
+def get_pad_min_max(pad_index):
+    """Calculating the minimum and maximum note coordinates in a pad"""
+    top = 2
+    bottom = 16
+    for bar in score:
+        if bar.pad == pad_index:
+            for chord in bar.chords:
+                for note in chord.notes:
+                    if not chord.rest and note.pitch < top:
+                        top = note.pitch
+                    if note.pitch > bottom:
+                        bottom = note.pitch
+
+        if bar.pad > pad_index:
+            return [top, bottom + 1]
+
+    return [top, bottom + 1]
 
 def load(stdscr : curses.window) -> None:
     """Loading a new score"""
@@ -625,7 +643,7 @@ def redoAllPads(score):
             bar.shiftBar(bar.y * -1)
 
             if bar.pad >= len(pads):
-                pads.append(curses.newpad(20, 300))
+                pads.append(curses.newpad(22, 300))
 
             # Update pad value of all bars that come after
             index = score.index(bar)
@@ -638,7 +656,6 @@ def redoAllPads(score):
     pads = pads[:currentPad + 1]
 
 def shiftElementsRight(change):
-    open("log.txt", "a").write("\nIn shiftElementsRight. Change:" + str(change))
     global current_chord
     global current_bar
 
@@ -849,7 +866,7 @@ def navigateAwayFrom():
     [x, y] = getCurrentCoords()
 
     if x == -1 or x == None:
-        for i in range(6, 10):
+        for i in range(7, 11):
             pad.chgat(i, y, 1, curses.color_pair(2))
             pad.chgat(i, y + 1, 1, curses.color_pair(2))
     else:
@@ -871,7 +888,7 @@ def navigateToNote():
                 pad.chgat(x, y, 1, curses.color_pair(1))
         else:
             if current_chord.length < 2:
-                for i in range(6, 10):
+                for i in range(7, 11):
                     pad.chgat(i, y, 1, curses.color_pair(1))
             else:
                 pad.chgat(7, y, 2, curses.color_pair(1))
@@ -985,10 +1002,6 @@ def transpose(direction, stave_pad, change):
         else:
             newPitch = current_note.pitch + change
 
-        # If the new pitch is outside the valid note range (C3 to D6)
-        # if newPitch > 22 or (newPitch < 0 and stave_height >= 22):
-        #     return
-
         # If new pitch is outside valid stave height
         if newPitch < 0 or newPitch >= stave_height:
             return
@@ -1069,8 +1082,6 @@ def drawChord(pad, chord):
 
     else:
         Draw.drawRest(pad, chord)
-
-    pad.refresh(0, 0, 1, 1, stave_height, stdscr_width - 2)
 
 def drawStem(pad : curses.window, chord : Chord, noteCoords : list[int]):
     y = chord.y
@@ -1156,16 +1167,16 @@ def drawBar(barIndex):
         for i in range(0, stave_height - 1):
             pad.addstr(i, start_y, " " * (length + 2))
 
-        pad.addstr(3, start_y, "┰" + ("\u2500" * length) + "\u2512")
-        for i in range(4, 11, 2):
-            pad.addstr(i, start_y, "\u2503" + (" " * length) + "\u2503")
-        for i in range(5, 10, 2):
-            pad.addstr(i, start_y, "\u2520" + ("\u2500" * length) + "\u2528")
-        pad.addstr(11, start_y, "┸" + ("\u2500" * length) + "\u251A")
+        pad.addstr(4, start_y, "┰" + ("─" * length) + "┒")
+        for i in range(5, 12, 2):
+            pad.addstr(i, start_y, "┃" + (" " * length) + "┃")
+        for i in range(6, 11, 2):
+            pad.addstr(i, start_y, "┠" + ("─" * length) + "┨")
+        pad.addstr(12, start_y, "┸" + ("─" * length) + "┚")
 
         if start_y == 0:
-            pad.addstr(3, start_y, "\u250E")
-            pad.addstr(11, start_y, "\u2516")
+            pad.addstr(4, start_y, "┎")
+            pad.addstr(12, start_y, "┖")
 
         for chord in bar.chords:
             drawChord(pad, chord)

@@ -3,17 +3,20 @@ from Objects.Chord import Chord
 import music
 import pygame
 from pygame import mixer
+from Draw import keys
 
 coordsToPitch = { 0: 0, 1 : -2, 2 : -4, 3 : -5, 4 : -7, 5 : -9, 6 : -10}
 
+
 class Playback:
 
-    def createAudio(score, file):
-        chords = Playback.scoreToPlayback(score)
+    def createAudio(score, file, key):
+        chords = Playback.scoreToPlayback(score, key)
 
         melody = music.horizontal_stack(*[music.adsr(sonic_vector=n)
                                   for n in chords])
-
+            
+        # , attack_ms=50, decay_ms=70,release_ms=0
         if file == "":
             file = "playback"
         music.write_wav_mono(melody, file + ".wav")
@@ -34,7 +37,7 @@ class Playback:
     def checkAudio():
         return mixer.music.get_busy()
 
-    def scoreToPlayback(score):
+    def scoreToPlayback(score, key):
 
         chords = []
 
@@ -43,7 +46,7 @@ class Playback:
                 length = chord.length / 2
                 if chord.staccato:
                     length = 0.2
-                xvalues = Playback.chordToPitches(chord)
+                xvalues = Playback.chordToPitches(chord, key)
 
                 if xvalues[0] == None:
                     chords.append(music.silence(length))
@@ -60,17 +63,15 @@ class Playback:
                     if chord.staccato:
                         chords.append(music.silence((chord.length / 2) - 0.2))
 
-            
-
         return chords
 
-    def chordToPitches(chord) -> list[int]:
+    def chordToPitches(chord, key) -> list[int]:
         xvalues = []
         for note in chord.notes:
             if note.pitch == -1:
                 return [None]
             
-            pitch = (note.pitch - 8)
+            pitch = (note.pitch - 9)
 
             toMultiply = pitch // 7
             standardised = pitch - (toMultiply * 7)
@@ -81,8 +82,16 @@ class Playback:
             if note.sharp:
                 dictPitch += 1
 
-            if note.flat:
+            elif note.flat:
                 dictPitch -= 1
+
+            # elif standardised in keys[key]:
+            #     open("log.txt", "a").write("\nStandardised: "+ str(standardised))
+
+            #     if key[1] == "b":
+            #         dictPitch -= 1
+            #     else:
+            #         dictPitch += 1
 
             xvalues.append(dictPitch)
 

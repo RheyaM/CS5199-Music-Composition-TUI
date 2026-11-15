@@ -3,19 +3,18 @@ import math
 
 from Objects.Chord import Chord
 
-keys : dict = {"C Major": [], "G Major": [3], "D Major": [3, 6], 
-               "A Major": [3, 6, 2], "E Major": [3, 6, 2, 5],
-               "B Major": [3, 6, 2, 5, 8], "F# Major": [3, 6, 2, 5, 8, 4],
-               "Db Major": [7, 4, 8, 5, 9], "Ab Major": [7, 4, 8, 5], 
-               "Eb Major": [7, 4, 8], "Bb Major": [7, 4], "F Major": [7]}
-
+keys : dict = {"C Major": [], "G Major": [4], "D Major": [4, 8], 
+               "A Major": [4, 8, 3], "E Major": [4, 7, 3, 6],
+               "B Major": [4, 7, 3, 6, 9], "F# Major": [4, 7, 3, 6, 9, 5],
+               "Db Major": [8, 5, 9, 6, 10], "Ab Major": [8, 5, 9, 6], 
+               "Eb Major": [8, 5, 9], "Bb Major": [8, 5], "F Major": [8]}
 
 class Draw:
 
     hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes" , "Opt-Up/Down": "transpose by 1", 
-             "SHIFT-Up/Down": "transpose by an octave", "SHIFT-Left/Right": "swap notes", 
-             "[": "decrease note length", "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
-             "n": "natural", "p" : "Play score", "m" : "Export to PDF"}
+                 "SHIFT-Up/Down": "transpose by an octave", "SHIFT-Left/Right": "swap notes", 
+                 "[": "decrease note length", "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
+                 "n": "natural", "p" : "Play score", "m" : "Export to PDF"}
 
     def drawTreble(pad, x, y):
         pad.addstr(x, y, "|\\")
@@ -34,18 +33,18 @@ class Draw:
 
         length = 15
 
-        pad.addstr(3, 0, "┎" + ("─" * length))
+        pad.addstr(4, 0, "┎" + ("─" * length))
 
-        for i in range(5, 10, 2):
+        for i in range(6, 11, 2):
             pad.addstr(i, 0, "┠" + ("─" * length))
 
-        for i in range(4, 11, 2):
+        for i in range(5, 12, 2):
             pad.addstr(i, 0, "┃" + (" " * length))
 
-        pad.addstr(11, 0, "┖" + ("─" * length))
+        pad.addstr(12, 0, "┖" + ("─" * length))
 
-        Draw.drawTreble(pad, 3, 4)
-        Draw.drawTimeSig(pad, 6, 10, str(beats), "4")
+        Draw.drawTreble(pad, 4, 4)
+        Draw.drawTimeSig(pad, 7, 10, str(beats), "4")
         Draw.draw_key_sig(pad, 12, key)
     
     def drawTimeSig(pad, x, y, num, dom):
@@ -68,28 +67,28 @@ class Draw:
     def drawRest(pad, chord):
         y = chord.y
         if chord.length == 1:
-            pad.addstr(6, y, "╲")
-            pad.addstr(7, y, "╱")
-            pad.addstr(8, y, "╲")
-            pad.addstr(9, y, "C")
+            pad.addstr(7, y, "╲")
+            pad.addstr(8, y, "╱")
+            pad.addstr(9, y, "╲")
+            pad.addstr(10, y, "C")
 
         elif chord.length < 1:
             subdivision = 1 / chord.length
             lines = math.log(subdivision, 2)
             for i in range(int(lines)):
-                pad.addstr(6 + i, y, "⚈")
+                pad.addstr(7 + i, y, "⚈")
 
             for i in range(4):
-                pad.addstr(6 + i, y + 1, "|")
+                pad.addstr(7 + i, y + 1, "|")
 
         elif chord.length == 4:
-            pad.addstr(5, y, "▃▃")
+            pad.addstr(6, y, "▃▃")
 
         elif chord.length == 2:
-            pad.addstr(7, y, "▀▀")
+            pad.addstr(8, y, "▀▀")
 
         elif chord.length == 3:
-            pad.addstr(7, y, "▀▀•")
+            pad.addstr(8, y, "▀▀•")
 
 
     def drawNotes(pad : curses.window, chord : Chord) -> list[int]:
@@ -103,9 +102,11 @@ class Draw:
             if chord.length >= 2:
                 string = "❨❩"
             else:
-                string = "\u26AA"
+                string = "⚪"
 
-            open("log.txt", "a").write("\nnote.pitch: " + str(note.pitch) + ". y: " + str(y))
+            open("log.txt", "a").write("\nAdding '⚪' to " + str(note.pitch) + ", " + str(y))
+            
+
             pad.addstr(note.pitch, y, string, curses.color_pair(2))
             Draw.drawAttributes(pad, note, chord)
 
@@ -118,9 +119,9 @@ class Draw:
         if note.sharp:
             pad.addstr(x, y-1, "#")
         elif note.flat:
-            pad.addstr(x, y-1, "\u266D", curses.A_BOLD)
+            pad.addstr(x, y-1, "♭", curses.A_BOLD)
         elif note.natural:
-            pad.addstr(x, y-1, "\u266E", curses.A_BOLD)
+            pad.addstr(x, y-1, "♮", curses.A_BOLD)
 
         if chord.length == 3:
             pad.addstr(x, y+2, "•")
@@ -145,9 +146,9 @@ class Draw:
         pad.addstr(linex, y, chars[1] + chars[2])
 
     def emptyStaveRegion(pad, y):
-        for x in range(0, 15):
+        for x in range(0, 22):
             pad.addstr(x, y - 1, "    ")
-        for x in range (3, 12, 2):
+        for x in range (4, 13, 2):
             pad.addstr(x, y - 1, "────")
 
     def drawHints(pad, width):
