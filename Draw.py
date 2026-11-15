@@ -103,10 +103,7 @@ class Draw:
                 string = "❨❩"
             else:
                 string = "⚪"
-
-            open("log.txt", "a").write("\nAdding '⚪' to " + str(note.pitch) + ", " + str(y))
-            
-
+        
             pad.addstr(note.pitch, y, string, curses.color_pair(2))
             Draw.drawAttributes(pad, note, chord)
 

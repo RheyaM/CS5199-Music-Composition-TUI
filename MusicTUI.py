@@ -79,7 +79,7 @@ def main(stdscr : curses.window) -> None:
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
-    stave_pad.refresh(2, 0, 0, 0, 14, stdscr_width - 2)
+    stave_pad.refresh(1, 0, 0, 0, 14, stdscr_width - 2)
 
     open("keylog.txt", "a").write("\n#####################################")
 
@@ -449,9 +449,15 @@ def shiftVisible(visible : list[int], currentPadIndex : int) -> list[int]:
         visible.append(to_compare + dir)
         visible.sort()
 
-        # If there are too many visible pads for the current stave_height, remove one
-        if len(visible) > (stdscr_height - 6)/stave_height:
+        total_length = sum([get_pad_length(i) for i in range(len(visible))])
+        while total_length > stdscr_height - 6:
             visible.pop(toRemove)
+            total_length = sum([get_pad_length(i) for i in range(len(visible))])
+
+
+def get_pad_length(pad_index):
+    [top, bottom] = get_pad_min_max(pad_index)
+    return (bottom - top)
 
 def refreshVisiblePads(stdscr : curses.window) -> None:
     """Refreshing pads based on visible pads"""
@@ -471,7 +477,6 @@ def refreshVisiblePads(stdscr : curses.window) -> None:
         pad : curses.window = pads[visible[-1] + 1]
         [top, bottom] = get_pad_min_max(visible[-1] + 1)
 
-        open("log.txt", "a").write("\n" + str(min(x + (bottom - top) + 1, stdscr_height - 6)))
         pad.refresh(top, 0, x, 0, min(x + (bottom - top) + 1, stdscr_height - 7), stdscr_width - 2)
 
     else:
@@ -481,8 +486,8 @@ def refreshVisiblePads(stdscr : curses.window) -> None:
 
 def get_pad_min_max(pad_index):
     """Calculating the minimum and maximum note coordinates in a pad"""
-    top = 2
-    bottom = 16
+    top = 1
+    bottom = 14
     for bar in score:
         if bar.pad == pad_index:
             for chord in bar.chords:

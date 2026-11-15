@@ -250,8 +250,6 @@ class Representation:
         string = "\\version \"2.26.0\"{ \\fixed c' { \\numericTimeSignature "
 
         string += f"\\time {beats}/4 "
-
-        open("log.txt", "a").write("\n" + str(string))
         
         for bar in score:
             for chord in bar.chords:
