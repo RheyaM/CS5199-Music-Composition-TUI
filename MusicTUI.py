@@ -5,6 +5,7 @@ from curses import wrapper
 from curses.textpad import Textbox, rectangle
 
 import subprocess
+import sys
 
 """Importing math module for logs"""
 import math
@@ -59,9 +60,9 @@ def main(stdscr : curses.window) -> None:
 
     stdscr_height, stdscr_width = stdscr.getmaxyx()
 
-    # TODO: exit with verbose exception if screen size not large enough
-    if stdscr_height < 20:
-        pass
+    # Exit if the screen size is too small
+    if stdscr_height < 20 or stdscr_width < 113:
+        sys.exit("Terminal size is too small")
     
     setUpTUI(stdscr)
 
@@ -182,7 +183,7 @@ def main(stdscr : curses.window) -> None:
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
 
                 # Provided the terminal size is large enough:
-                if stdscr_width >= 94 and stdscr_height >= 20:
+                if stdscr_width >= 113 and stdscr_height >= 20:
                     Draw.drawHints(hints, stdscr_width)
                     redoAllPads(score)
                     drawEntireScore()
@@ -197,7 +198,7 @@ def main(stdscr : curses.window) -> None:
                     stave_pad.addstr(0, 0, char)
 
         # If the terminal is too small, create an error message pad
-        if stdscr_height < 20 or stdscr_width < 94:
+        if stdscr_height < 20 or stdscr_width < 112:
             too_small = curses.newpad(stdscr_height, stdscr_width)
             too_small.addstr(stdscr_height // 2, (stdscr_width // 2) - 12, "Terminal size too small")
             too_small.refresh(0, 0, 0, 0, stdscr_height, stdscr_width)
@@ -224,6 +225,15 @@ def main(stdscr : curses.window) -> None:
         stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
+
+# def textbox_mode(stdscr):
+    
+def changed_key_inputs(x):
+    if x == 10:
+        return 7
+    elif x == 127:
+        return 263
+    return x
 
 def set_curses_modes(stdscr):
     curses.use_default_colors()
@@ -517,7 +527,7 @@ def load(stdscr : curses.window) -> None:
     rectangle(stdscr, stdscr_height - 6, 1, stdscr_height - 3, 43)
     stdscr.refresh()
 
-    box.edit()
+    box.edit(changed_key_inputs)
     text = box.gather().replace("\n","").replace(" ", "")
 
     try:
@@ -568,7 +578,7 @@ def saveAs(stdscr : curses.window, textbox : curses.window) -> None:
     rectangle(stdscr, stdscr_height - 6, 1, stdscr_height - 3, 43)
     stdscr.refresh()
 
-    box.edit()
+    box.edit(changed_key_inputs)
     text = box.gather().replace("\n", "").replace(" ", "")
 
 

@@ -5,8 +5,8 @@ from Objects.Note import Note
 
 class Representation:
 
-    note_dict = {"c": 13, "d": 12, "e": 11, "f": 10, "g": 9, "a": 8, "b": 7}
-    pitch_dict = {13 : "c", 12: "d", 11: "e", 10: "f", 9: "g", 8: "a", 7: "b"}
+    note_dict = {"c": 14, "d": 13, "e": 12, "f": 11, "g": 10, "a": 9, "b": 8}
+    pitch_dict = {14 : "c", 13: "d", 12: "e", 11: "f", 10: "g", 9: "a", 8: "b"}
 
     current_length = 0
     
