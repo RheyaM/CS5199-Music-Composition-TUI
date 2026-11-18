@@ -3,11 +3,13 @@ import math
 
 from Objects.Chord import Chord
 
-keys : dict = {"C Major": [], "G Major": [4], "D Major": [4, 8], 
-               "A Major": [4, 8, 3], "E Major": [4, 7, 3, 6],
-               "B Major": [4, 7, 3, 6, 9], "F# Major": [4, 7, 3, 6, 9, 5],
-               "Db Major": [8, 5, 9, 6, 10], "Ab Major": [8, 5, 9, 6], 
-               "Eb Major": [8, 5, 9], "Bb Major": [8, 5], "F Major": [8]}
+middle_c = 9
+
+keys : dict = {"C Major": [], "G Major": [6], "D Major": [6, 9], 
+               "A Major": [6, 9, 5], "E Major": [6, 9, 5, 8],
+               "B Major": [6, 9, 5, 8, 11], "F# Major": [6, 9, 5, 8, 11, 7],
+               "Db Major": [10, 7, 11, 8, 12], "Ab Major": [10, 7, 11, 8], 
+               "Eb Major": [10, 7, 11], "Bb Major": [10, 7], "F Major": [10]}
 
 class Draw:
 
@@ -29,23 +31,23 @@ class Draw:
         pad.addstr(x + 9, y, "|")
         pad.addstr(x + 10, y - 1, "◯|")
 
-    def drawBeginning(pad, beats, key):
+    def drawBeginning(pad, beats, key, middle_c):
 
         length = 15
 
-        pad.addstr(4, 0, "┎" + ("─" * length))
+        pad.addstr(middle_c - 3, 0, "┎" + ("─" * length))
 
-        for i in range(6, 11, 2):
+        for i in range(middle_c - 1, middle_c + 4, 2):
             pad.addstr(i, 0, "┠" + ("─" * length))
 
-        for i in range(5, 12, 2):
+        for i in range(middle_c - 2, middle_c + 5, 2):
             pad.addstr(i, 0, "┃" + (" " * length))
 
-        pad.addstr(12, 0, "┖" + ("─" * length))
+        pad.addstr(middle_c + 5, 0, "┖" + ("─" * length))
 
-        Draw.drawTreble(pad, 4, 4)
-        Draw.drawTimeSig(pad, 7, 10, str(beats), "4")
-        Draw.draw_key_sig(pad, 12, key)
+        Draw.drawTreble(pad, middle_c - 3, 4)
+        Draw.drawTimeSig(pad, middle_c, 10, str(beats), "4")
+        Draw.draw_key_sig(pad, middle_c + 5, key)
     
     def drawTimeSig(pad, x, y, num, dom):
         pad.addstr(x, y, num)
@@ -67,28 +69,28 @@ class Draw:
     def drawRest(pad, chord):
         y = chord.y
         if chord.length == 1:
-            pad.addstr(7, y, "╲")
-            pad.addstr(8, y, "╱")
-            pad.addstr(9, y, "╲")
-            pad.addstr(10, y, "C")
+            pad.addstr(middle_c, y, "╲")
+            pad.addstr(middle_c + 1, y, "╱")
+            pad.addstr(middle_c + 2, y, "╲")
+            pad.addstr(middle_c + 3, y, "C")
 
         elif chord.length < 1:
             subdivision = 1 / chord.length
             lines = math.log(subdivision, 2)
             for i in range(int(lines)):
-                pad.addstr(7 + i, y, "⚈")
+                pad.addstr(middle_c + i, y, "⚈")
 
             for i in range(4):
-                pad.addstr(7 + i, y + 1, "|")
+                pad.addstr(middle_c + i, y + 1, "|")
 
         elif chord.length == 4:
-            pad.addstr(6, y, "▃▃")
+            pad.addstr(middle_c - 1, y, "▃▃")
 
         elif chord.length == 2:
-            pad.addstr(8, y, "▀▀")
+            pad.addstr(middle_c + 2, y, "▀▀")
 
         elif chord.length == 3:
-            pad.addstr(8, y, "▀▀•")
+            pad.addstr(middle_c + 2, y, "▀▀•")
 
 
     def drawNotes(pad : curses.window, chord : Chord) -> list[int]:
@@ -103,7 +105,7 @@ class Draw:
                 string = "❨❩"
             else:
                 string = "⚪"
-        
+            
             pad.addstr(note.pitch, y, string, curses.color_pair(2))
             Draw.drawAttributes(pad, note, chord)
 
@@ -143,9 +145,9 @@ class Draw:
         pad.addstr(linex, y, chars[1] + chars[2])
 
     def emptyStaveRegion(pad, y):
-        for x in range(0, 22):
+        for x in range(0, 24):
             pad.addstr(x, y - 1, "    ")
-        for x in range (4, 13, 2):
+        for x in range (middle_c - 3, middle_c + 6, 2):
             pad.addstr(x, y - 1, "────")
 
     def drawHints(pad, width):

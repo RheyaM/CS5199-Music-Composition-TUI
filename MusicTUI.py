@@ -23,7 +23,9 @@ from Playback import Playback
 
 file : str = ""
 
-note_dict : dict = {"c": 14, "d": 13, "e": 12, "f": 11, "g": 10, "a": 9, "b": 8}
+middle_c : int = 9
+
+note_dict : dict = {"c": middle_c + 7, "d": middle_c + 6, "e": middle_c + 5, "f": middle_c + 4, "g": middle_c + 3, "a": middle_c + 2, "b": middle_c + 1}
 all_notes : list[str] = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
 
 beats : int = 4
@@ -42,13 +44,15 @@ current_note : Note = current_chord.notes[0] # Note object
 # prevStack = for each change to the score, store the string representation and the current bar, chord and note
 prevStack : list[[str, int, int, int]] = [["B:4.|r1rrr|rrrr|", current_bar, 0, 0]]
 
-# stave_height - going to restrict how many octaves we can use
-stave_height : int = 22
+# stave_height - to determine how many octaves we can use
+stave_height : int = 26
 
 stdscr_width : int = 0
 stdscr_height : int = 0
 
 clipboard = None
+
+string_edit_mode = False
 
 # TODO: allow higher/lower notes past the stave
 
@@ -57,6 +61,7 @@ def main(stdscr : curses.window) -> None:
     global stdscr_height
     global prevStack
     global key
+    global string_edit_mode
 
     stdscr_height, stdscr_width = stdscr.getmaxyx()
 
@@ -74,7 +79,7 @@ def main(stdscr : curses.window) -> None:
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
-    stave_pad.refresh(1, 0, 0, 0, 14, stdscr_width - 2)
+    stave_pad.refresh(3, 0, 0, 0, 14, stdscr_width - 2)
 
     open("keylog.txt", "a").write("\n#####################################")
 
@@ -178,7 +183,6 @@ def main(stdscr : curses.window) -> None:
                 key = createMenu(stdscr, "key")
                 drawEntireScore()
                 
-
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
 
@@ -214,19 +218,35 @@ def main(stdscr : curses.window) -> None:
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
-        # if not Playback.checkAudio():
-        #     playPad.erase()
-        #     playPad = None
-
-        # if playPad:
-        #     playPad.refresh(0, 0, stdscr_height - 4, stdscr_width - 35, stdscr_height - 1, stdscr_width - 1)
-            
         refreshVisiblePads(stdscr)
         stave_pad = getCurrentPad()
 
         open("keylog.txt", "a").write("\n" + char)
 
-# def textbox_mode(stdscr):
+def string_mode(stdscr):
+    global score
+
+    writing_box = curses.newwin(2, stdscr_width - 3, stdscr_height - 5, 0)
+    writing_box.addstr(Representation.scoreToString(score, beats))
+    
+    curses.curs_set(1)
+
+    writing_box.scrollok(True)
+    tb = curses.textpad.Textbox(writing_box)
+    tb.insert_mode = True
+
+    writing_box.refresh()
+
+    tb.edit(changed_key_inputs)
+    text = tb.gather().strip().replace("\n", "")
+
+    try:
+        score = Representation.stringToScore(text)
+
+    except:
+        open("log.txt", "a").write("\nstringToScore error")
+
+    curses.curs_set(0)
     
 def changed_key_inputs(x):
     if x == 10:
@@ -340,7 +360,7 @@ def changeTimeSignature(new_beats):
 def exportToLilypond(score : list[Bar]) -> None:
     """Calling the makeLilypond shell script to compile a pdf of the current score"""
 
-    string = Representation.scoreToLilypond(score, beats)
+    string = Representation.scoreToLilypond(score, beats, key)
     if file == "":
         lilypond_file = "Untitled.ly"
     else:
@@ -410,7 +430,7 @@ def setUpTUI(stdscr: curses.window) -> None:
     stdscr.clear()
     
     # Creating and adding the first stave pad to the screen
-    stave_pad : curses.window = curses.newpad(22, 300)
+    stave_pad : curses.window = curses.newpad(26, 300)
 
     stdscr.refresh()
     pads.append(stave_pad)
@@ -458,7 +478,6 @@ def shiftVisible(visible : list[int], currentPadIndex : int) -> list[int]:
             visible.pop(toRemove)
             total_length = sum([get_pad_length(i) for i in range(len(visible))])
 
-
 def get_pad_length(pad_index):
     [top, bottom] = get_pad_min_max(pad_index)
     return (bottom - top)
@@ -490,16 +509,23 @@ def refreshVisiblePads(stdscr : curses.window) -> None:
 
 def get_pad_min_max(pad_index):
     """Calculating the minimum and maximum note coordinates in a pad"""
-    top = 1
-    bottom = 14
+    top = middle_c - 6
+    bottom = middle_c + 7
     for bar in score:
         if bar.pad == pad_index:
             for chord in bar.chords:
-                for note in chord.notes:
-                    if not chord.rest and note.pitch < top:
-                        top = note.pitch
-                    if note.pitch > bottom:
-                        bottom = note.pitch
+                notes = chord.notes
+                additional = 0
+                if chord.staccato:
+                    additional += 1
+                if chord.accent:
+                    additional += 1
+
+                if not chord.rest and notes[0].pitch - additional < top:
+                    top = notes[0].pitch - additional
+
+                if notes[-1].pitch + additional > bottom:
+                    bottom = notes[-1].pitch + additional
 
         if bar.pad > pad_index:
             return [top, bottom + 1]
@@ -652,7 +678,7 @@ def redoAllPads(score):
             bar.shiftBar(bar.y * -1)
 
             if bar.pad >= len(pads):
-                pads.append(curses.newpad(22, 300))
+                pads.append(curses.newpad(26, 300))
 
             # Update pad value of all bars that come after
             index = score.index(bar)
@@ -875,7 +901,7 @@ def navigateAwayFrom():
     [x, y] = getCurrentCoords()
 
     if x == -1 or x == None:
-        for i in range(7, 11):
+        for i in range(middle_c, middle_c + 4):
             pad.chgat(i, y, 1, curses.color_pair(2))
             pad.chgat(i, y + 1, 1, curses.color_pair(2))
     else:
@@ -897,10 +923,10 @@ def navigateToNote():
                 pad.chgat(x, y, 1, curses.color_pair(1))
         else:
             if current_chord.length < 2:
-                for i in range(7, 11):
+                for i in range(middle_c, middle_c + 4):
                     pad.chgat(i, y, 1, curses.color_pair(1))
             else:
-                pad.chgat(7, y, 2, curses.color_pair(1))
+                pad.chgat(middle_c, y, 2, curses.color_pair(1))
 
 def horizontalNavigation(dir):
     global current_bar
@@ -1012,7 +1038,7 @@ def transpose(direction, stave_pad, change):
             newPitch = current_note.pitch + change
 
         # If new pitch is outside valid stave height
-        if newPitch < 0 or newPitch >= stave_height:
+        if newPitch < 2 or newPitch >= stave_height - 2:
             return
 
         current_chord.removeNote(current_note)
@@ -1134,7 +1160,7 @@ def drawStem(pad : curses.window, chord : Chord, noteCoords : list[int]):
 def determineFurthestDist(noteCoords : list[int]):
     furthestdist = 0
     for n in noteCoords:
-        dist = n - 5
+        dist = n - (middle_c + 1)
         if abs(dist) > abs(furthestdist):
             furthestdist = dist
 
@@ -1176,22 +1202,22 @@ def drawBar(barIndex):
         for i in range(0, stave_height - 1):
             pad.addstr(i, start_y, " " * (length + 2))
 
-        pad.addstr(4, start_y, "┰" + ("─" * length) + "┒")
-        for i in range(5, 12, 2):
+        pad.addstr(middle_c - 3, start_y, "┰" + ("─" * length) + "┒")
+        for i in range(middle_c - 2, middle_c + 5, 2):
             pad.addstr(i, start_y, "┃" + (" " * length) + "┃")
-        for i in range(6, 11, 2):
+        for i in range(middle_c - 1, middle_c + 4, 2):
             pad.addstr(i, start_y, "┠" + ("─" * length) + "┨")
-        pad.addstr(12, start_y, "┸" + ("─" * length) + "┚")
+        pad.addstr(middle_c + 5, start_y, "┸" + ("─" * length) + "┚")
 
         if start_y == 0:
-            pad.addstr(4, start_y, "┎")
-            pad.addstr(12, start_y, "┖")
+            pad.addstr(middle_c - 3, start_y, "┎")
+            pad.addstr(middle_c + 5, start_y, "┖")
 
         for chord in bar.chords:
             drawChord(pad, chord)
 
         if barIndex == 0:
-            Draw.drawBeginning(pad, beats, key)
+            Draw.drawBeginning(pad, beats, key, middle_c)
 
         # If a bar is the last on its pad, or the last in score, remove any further characters
         if (barIndex < len(score) - 1 and score[barIndex + 1].pad > score[barIndex].pad) or barIndex == len(score) - 1:

@@ -5,8 +5,10 @@ from Objects.Note import Note
 
 class Representation:
 
-    note_dict = {"c": 14, "d": 13, "e": 12, "f": 11, "g": 10, "a": 9, "b": 8}
-    pitch_dict = {14 : "c", 13: "d", 12: "e", 11: "f", 10: "g", 9: "a", 8: "b"}
+    middle_c : int = 9
+
+    note_dict : dict = {"c": middle_c + 7, "d": middle_c + 6, "e": middle_c + 5, "f": middle_c + 4, "g": middle_c + 3, "a": middle_c + 2, "b": middle_c + 1}
+    pitch_dict = {v: k for k, v in note_dict.items()}
 
     current_length = 0
     
@@ -60,12 +62,12 @@ class Representation:
         else:
             dir = 0
 
-            while pitch < 7:
+            while pitch < Representation.middle_c + 1:
                 pitch += 7
                 dir += 1
                 char = "'"
 
-            while pitch > 13:
+            while pitch > Representation.middle_c + 7:
                 pitch -= 7
                 dir += 1
                 char = ","
@@ -76,8 +78,6 @@ class Representation:
 
 
     # TODO: maybe removing charrs as we go isn't the most efficient? space or timing wise?
-    # Iterating when possible mayy be better
-    # I.e. like when you get the group of notes in a chord. Don't need to eat them
     # Just need to iterate probably
     def stringToScore(string):
         global note_dict
@@ -245,10 +245,16 @@ class Representation:
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]
 
-    def scoreToLilypond(score : list[Bar], beats : int):
+    def scoreToLilypond(score : list[Bar], beats : int, key : str):
         string = "\\version \"2.26.0\"{ \\fixed c' { \\numericTimeSignature "
 
         string += f"\\time {beats}/4 "
+
+        [pitch, mode] = key.split(" ")
+        pitch = pitch.replace("#", "is").replace("b", "es").lower()
+        string += f"\\key {pitch} \\{mode.lower()} "
+
+        open("log.txt", "a").write("\n" + string)
         
         for bar in score:
             for chord in bar.chords:
@@ -290,6 +296,12 @@ class Representation:
 
                 if chord.tie:
                     chordstr += "~"
+
+                if chord.accent:
+                    chordstr += "->"
+
+                if chord.staccato:
+                    chordstr += "\\staccato"
 
                 string += chordstr + " "
 
