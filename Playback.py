@@ -6,11 +6,11 @@ from pygame import mixer
 
 coordsToPitch = { 0: 0, 1 : -2, 2 : -4, 3 : -5, 4 : -7, 5 : -9, 6 : -10}
 
-keys : dict = {"C Major": [], "G Major": [4], "D Major": [4, 1], 
-               "A Major": [4, 1, 3], "E Major": [4, 7, 3, 6],
-               "B Major": [4, 7, 3, 6, 2], "F# Major": [4, 7, 3, 6, 2, 5],
-               "Db Major": [1, 5, 2, 6, 3], "Ab Major": [1, 5, 2, 6], 
-               "Eb Major": [1, 5, 2], "Bb Major": [1, 5], "F Major": [1]}
+keys : dict = {"C Major": [], "G Major": [6], "D Major": [6, 2], 
+               "A Major": [6, 2, 5], "E Major": [6, 2, 5, 1],
+               "B Major": [6, 2, 5, 1, 4], "F# Major": [6, 2, 5, 1, 4, 0],
+               "Db Major": [3, 0, 4, 1, 5], "Ab Major": [3, 0, 4, 1], 
+               "Eb Major": [3, 0, 4], "Bb Major": [3, 0], "F Major": [3]}
 
 
 class Playback:
@@ -76,7 +76,7 @@ class Playback:
             if note.pitch == -1:
                 return [None]
             
-            pitch = (note.pitch - 9)
+            pitch = (note.pitch - 11)
 
             toMultiply = pitch // 7
             standardised = pitch - (toMultiply * 7)
@@ -92,6 +92,8 @@ class Playback:
                 dictPitch -= 1
 
             elif note.pitch - (7 * (note.pitch//7)) in keys[key]:
+
+                open("log.txt", "a").write("\nyup")
 
                 if key[1] == "b" or key == "F Major":
                     dictPitch -= 1

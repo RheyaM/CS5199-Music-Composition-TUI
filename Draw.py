@@ -47,23 +47,24 @@ class Draw:
 
         Draw.drawTreble(pad, middle_c - 3, 4)
         Draw.drawTimeSig(pad, middle_c, 10, str(beats), "4")
-        Draw.draw_key_sig(pad, middle_c + 5, key)
+        Draw.draw_key_sig(pad, 12, key)
     
     def drawTimeSig(pad, x, y, num, dom):
+        Draw.emptyStaveRegion(pad, y)
         pad.addstr(x, y, num)
         pad.addstr(x + 2, y, dom)
 
-    def draw_key_sig(pad, x, key):
+    def draw_key_sig(pad, y, key):
         if key[1] == "b" or key == "F Major":
             char = "♭"
         else:
             char = "#"
 
         # dir represents which direction the coordinates of the notes must change
-        start_x = x
+        start_y = y
         for sharp in keys[key]:
-            pad.addstr(sharp, start_x, char)
-            start_x += 1
+            pad.addstr(sharp, start_y, char)
+            start_y += 1
 
 
     def drawRest(pad, chord):

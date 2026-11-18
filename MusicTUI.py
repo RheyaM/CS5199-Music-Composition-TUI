@@ -23,6 +23,8 @@ from Playback import Playback
 
 file : str = ""
 
+# middle_c determines the x-coordinates of many features (rests, notes, treble clef, etc.)
+# This allows easier adjustment of fixed coordinates if the maximum size of the stave is changes
 middle_c : int = 9
 
 note_dict : dict = {"c": middle_c + 7, "d": middle_c + 6, "e": middle_c + 5, "f": middle_c + 4, "g": middle_c + 3, "a": middle_c + 2, "b": middle_c + 1}
@@ -75,7 +77,6 @@ def main(stdscr : curses.window) -> None:
     hints : curses.window = setUpHints()
     stave_pad : curses.window = getCurrentPad()
     visible.append(0)
-    # playPad = None
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
@@ -84,6 +85,10 @@ def main(stdscr : curses.window) -> None:
     open("keylog.txt", "a").write("\n#####################################")
 
     while True:
+
+        if string_edit_mode:
+            string_mode(stdscr)
+            continue
 
         char : chr = stdscr.getkey()
         changeMade = True
@@ -182,6 +187,11 @@ def main(stdscr : curses.window) -> None:
             case "k":
                 key = createMenu(stdscr, "key")
                 drawEntireScore()
+
+            case "h":
+                string_edit_mode = not string_edit_mode
+                if string_edit_mode:
+                    string_mode(stdscr)
                 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -259,12 +269,16 @@ def set_curses_modes(stdscr):
     curses.use_default_colors()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_CYAN)
     curses.init_pair(2, curses.COLOR_WHITE, -1)
+
+    # Setting the cursor to invisible
     curses.curs_set(0)
+
     curses.cbreak()
 
     stdscr.keypad(True)
 
 def createMenu(stdscr, opt):
+    """Creating and displaying time or key signature menus. Returns the user's choice"""
 
     key_list=["C Major", "G Major", "D Major", "A Major", "E Major", "B Major", "F# Major",
                "Db Major", "Ab Major", "Eb Major", "Bb Major", "F Major"]
@@ -276,7 +290,6 @@ def createMenu(stdscr, opt):
         chosen_list = time_signature_list
 
     menu = CursesMenu.make_selection_menu(chosen_list,"Select an option")
-    # menu.should_exit = True
 
     menu.show()
     menu.join()
@@ -289,12 +302,14 @@ def createMenu(stdscr, opt):
 # Making a long list of chords
 # TODO: account for change in beats when undoing
 def changeTimeSignature(new_beats):
+    """Change the time signature of the piece"""
     global score
     global beats
     global current_note
     global current_chord
     global current_bar
 
+    # All chords appended to one list and resorted into bars
     chordList = []
     for bar in score:
         for chord in bar.chords:
@@ -314,6 +329,10 @@ def changeTimeSignature(new_beats):
 
         bar = new_score[bar_index]
         bar.chords.append(chord)
+
+        # To preserve the current chord, note which bar it is in
+        if chord == current_chord:
+            current_bar = bar_index
 
         # If the bar length exceeds new_beats
         if bar.total_length() > new_beats:
@@ -349,11 +368,7 @@ def changeTimeSignature(new_beats):
     redoAllPads(new_score)
 
     beats = new_beats
-
     score = new_score
-    current_bar = 0
-    current_chord = score[current_bar].chords[0]
-    current_note = current_chord.notes[0]
 
     drawEntireScore()
 
