@@ -313,7 +313,7 @@ def change_time_signature(new_beats):
             chord_list.append(chord)
 
     new_score = [Bar(0, new_beats)]
-    new_score[0].emptyBar()
+    new_score[0].empty_bar()
     bar_index = 0
 
     while len(chord_list) > 0:
@@ -322,7 +322,7 @@ def change_time_signature(new_beats):
         # Create a new bar if needed
         if bar_index == len(new_score):
             new_score.append(Bar(0, new_beats))
-            new_score[-1].emptyBar()
+            new_score[-1].empty_bar()
 
         bar = new_score[bar_index]
         bar.chords.append(chord)
@@ -334,7 +334,7 @@ def change_time_signature(new_beats):
         # If the bar length exceeds new_beats
         if bar.total_length() > new_beats:
             remainder = bar.total_length() - new_beats
-            new_chord = chord.duplicateChord()
+            new_chord = chord.duplicate_chord()
             new_chord.length = remainder
             chords_to_add = split_chord(new_chord)
 
@@ -360,7 +360,7 @@ def change_time_signature(new_beats):
 
 
     for bar in new_score:
-        bar.redoY()
+        bar.redo_y()
 
     redo_all_pads()
 
@@ -686,12 +686,12 @@ def redo_all_pads():
 
         # If the bar doesn't start where the previous ended, shift it left/right
         if bar.y != end_y and bar.pad == current_pad:
-            bar.shiftBar(end_y - bar.y)
+            bar.shift_bar(end_y - bar.y)
 
         # If the bar is overflowing, update its pad, y, and endy values
         if bar.endy >= stdscr_width - 3:
             bar.pad += 1
-            bar.shiftBar(bar.y * -1)
+            bar.shift_bar(bar.y * -1)
 
             if bar.pad >= len(pads):
                 pads.append(curses.newpad(26, 300))
@@ -715,7 +715,7 @@ def shift_elements_right(change):
 
     index = bar.chords.index(current_chord)
     for chord_index in range(index + 1, len(bar.chords)):
-        bar.chords[chord_index].shiftChord(change)
+        bar.chords[chord_index].shift_chord(change)
 
     score[current_bar].endy += change
 
@@ -740,7 +740,7 @@ def dec_length():
     bar = score[current_bar]
 
     # Current chord is the newly created half note
-    current_chord = bar.halfChord(current_chord)
+    current_chord = bar.half_chord(current_chord)
     current_note = current_chord.notes[0]
 
     # get the next chord in the bar
@@ -806,7 +806,7 @@ def override_chords(bar_index : int, chord, space : float):
             new_bar = Bar(score[-1].endy, beats)
             score.append(new_bar)
 
-            new_chord = chord.duplicateChord()
+            new_chord = chord.duplicate_chord()
             new_chord.length = space
             new_chord.y = new_bar.chords[0].y
 
@@ -822,7 +822,7 @@ def override_chords(bar_index : int, chord, space : float):
 
             if bar_index != next_bar:
 
-                new_chord = chord.duplicateChord()
+                new_chord = chord.duplicate_chord()
                 new_chord.length = space
                 new_chord.y = score[next_bar].chords[0].y
 
@@ -836,14 +836,14 @@ def override_chords(bar_index : int, chord, space : float):
             # Chord overriden, and it needs a remainder
             if space < 0:
 
-                remainder_chord = next_chord.duplicateChord()
+                remainder_chord = next_chord.duplicate_chord()
                 remainder_chord.length = abs(space)
 
                 chords_to_add = split_chord(remainder_chord)
                 for c in chords_to_add:
                     score[next_bar].chords.insert(index + 1, c)
 
-                score[next_bar].redoY()
+                score[next_bar].redo_y()
 
 def split_chord(chord : Chord) -> list[Chord]:
     """Splitting chords into valid note lengths"""
@@ -854,7 +854,7 @@ def split_chord(chord : Chord) -> list[Chord]:
         return [chord]
 
     while length > 0:
-        new_chord = chord.duplicateChord()
+        new_chord = chord.duplicate_chord()
 
         new_length = math.floor(length)
         if new_length == 0:
@@ -887,9 +887,9 @@ def toggle_note_attribute(pad : curses.window, attr : str):
         case "natural":
             current_note.toggleNatural()
         case "accent":
-            current_chord.toggleAccent()
+            current_chord.toggle_accent()
         case "staccato":
-            current_chord.toggleStaccato()
+            current_chord.toggle_staccato()
 
     Draw.draw_chord(pad, current_chord)
     navigate_to_note()
@@ -985,7 +985,7 @@ def move_left(bar_index : int, chord : Chord) -> list[int, Chord]:
 
     # Is there a previous Bar?
     if bar_index > 0:
-        prev_chord = score[bar_index - 1].getLastChord()
+        prev_chord = score[bar_index - 1].get_last_chord()
         return [bar_index - 1, prev_chord]
 
     # If not, return None
@@ -1017,8 +1017,8 @@ def vertical_navigation(pad, direction):
         add = 1
 
     if current_chord and current_note:
-        if current_chord.getOtherNote(current_note, add):
-            current_note = current_chord.getOtherNote(current_note, add)
+        if current_chord.get_other_note(current_note, add):
+            current_note = current_chord.get_other_note(current_note, add)
 
     Draw.draw_chord(pad, current_chord)
     navigate_to_note()
@@ -1041,7 +1041,7 @@ def transpose(direction, stave_pad, change):
             return
 
         current_chord.remove_note(current_note)
-        current_note = current_chord.addNote(new_pitch)
+        current_note = current_chord.add_note(new_pitch)
 
         Draw.draw_chord(stave_pad, current_chord)
         navigate_to_note()
@@ -1084,11 +1084,11 @@ def parse_note(stave_pad, note):
 
         # If regular note (Replace entire chord)
         if 97 >= note_code <= 103:
-            current_note = current_chord.replaceChord(x)
+            current_note = current_chord.replace_chord(x)
 
         # If SHIFT + note
         elif 65 >= note_code <= 71:
-            current_note = current_chord.addNote(x)
+            current_note = current_chord.add_note(x)
     else:
         # Current chord is a rest
         new_chord = Chord(x, current_chord.length, current_chord.y)

@@ -1,7 +1,7 @@
 from Objects.Note import Note
 
-# TODO set rest based on pitch instead?
 class Chord:
+    """Class for Chord objects"""
     def __init__(self, pitch, length, y):
         self.y = y
         self.length = length
@@ -16,18 +16,20 @@ class Chord:
 
         self.tie = False
 
-    def addNote(self, pitch : int) -> Note:
+    def add_note(self, pitch : int) -> Note:
+        """Add a note to the chord"""
         if self.rest:
             self.notes = []
             self.rest = False
 
-        newNote = Note(pitch)
-        self.notes.append(newNote)
+        new_note = Note(pitch)
+        self.notes.append(new_note)
         self.notes = sorted(self.notes, key = lambda x: x.pitch)
 
-        return newNote
+        return new_note
 
     def remove_note(self, note : Note) -> Note:
+        """Remove a note from the chord"""
         if self.rest:
             return
 
@@ -41,42 +43,48 @@ class Chord:
 
         return self.notes[index - 1 if index > 0 else 0]
 
-    def toggleStaccato(self) -> None:
+    def toggle_staccato(self) -> None:
+        """Toggle boolean value of self.staccato"""
         self.staccato = not self.staccato
 
-    def toggleAccent(self) -> None:
+    def toggle_accent(self) -> None:
+        """Toggle boolean value of self.accent"""
         self.accent = not self.accent
 
-    def replaceChord(self, pitch : int) -> Note:
+    def replace_chord(self, pitch : int) -> Note:
+        """Replace the current chord with a single note"""
         self.notes = [Note(pitch)]
         self.staccato = False
         self.accent = False
 
         return self.notes[0]
 
-    def getOtherNote(self, note : Note, change : int) -> Note:
+    def get_other_note(self, note : Note, change : int) -> Note:
         """Get the next note in a chord in the given direction"""
 
         current_index = self.notes.index(note)
         new_index = current_index + change
 
-        if len(self.notes) > new_index and new_index >= 0:
+        if len(self.notes) > new_index >= 0:
             return self.notes[new_index]
 
         return None
 
-    def shiftChord(self, change):
+    def shift_chord(self, change):
+        """Shift the y-coordinate of the chord"""
         self.y += change
 
-    def duplicateChord(self):
+    def duplicate_chord(self):
+        """Return a copy of the chord"""
         new_chord : Chord = Chord(-1, self.length, self.y)
         new_chord.notes = []
 
         for note in self.notes:
-            new_chord.addNote(note.pitch)
+            new_chord.add_note(note.pitch)
 
         new_chord.staccato = self.staccato
         new_chord.accent = self.accent
         new_chord.rest = self.rest
 
         return new_chord
+    

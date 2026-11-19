@@ -110,14 +110,14 @@ class Representation:
 
         bar_notes = substring[1::]
         bar = Bar(0, beats)
-        bar.emptyBar()
+        bar.empty_bar()
 
         while len(bar_notes) > 1:
 
             ch = bar_notes[0]
 
             if ch == "|":
-                bar.redoY()
+                bar.redo_y()
                 return [bar, bar_notes]
 
             if ch == "<":
@@ -144,7 +144,7 @@ class Representation:
 
             bar.chords.append(chord)
 
-        bar.redoY()
+        bar.redo_y()
         return [bar, bar_notes]
 
     # TODO: should default to current_length here rather than once None has been extracted
@@ -235,7 +235,7 @@ class Representation:
         while ch != ">":
 
             [pitch, substring] = Representation.get_chord_note(substring[0::])
-            note = chord.addNote(pitch)
+            note = chord.add_note(pitch)
 
             [func, substring] = Representation.extract_note_attributes(substring)
             func(note)
