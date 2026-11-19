@@ -5,16 +5,19 @@ from Objects.Note import Note
 
 class Representation:
 
-    middle_c : int = 9
+    MIDDLE_C : int = 9
 
-    note_dict : dict = {"c": middle_c + 7, "d": middle_c + 6, "e": middle_c + 5, "f": middle_c + 4, "g": middle_c + 3, "a": middle_c + 2, "b": middle_c + 1}
-    pitch_dict = {v: k for k, v in note_dict.items()}
+    NOTE_DICT : dict = {"c": MIDDLE_C + 7, "d": MIDDLE_C + 6, "e": MIDDLE_C + 5, "f": MIDDLE_C + 4, 
+                        "g": MIDDLE_C + 3, "a": MIDDLE_C + 2, "b": MIDDLE_C + 1}
+    pitch_dict = {v: k for k, v in NOTE_DICT.items()}
 
     current_length = 0
-    
-    def scoreToString(score, beats):
+
+    @staticmethod
+    def score_to_string(score : list[Bar], beats):
+        """Parsing the score list to a string"""
         string = "B:" + str(beats) + "."
-        currentLen = 0
+        current_len = 0
 
         string += "|"
 
@@ -24,7 +27,7 @@ class Representation:
                 notestr = ""
 
                 for note in chord.notes:
-                    notestr += Representation.pitchToNote(note.pitch)
+                    notestr += Representation.pitch_to_note(note.pitch)
 
                     if note.sharp:
                         notestr += "#"
@@ -36,22 +39,24 @@ class Representation:
                 if len(chord.notes) > 1:
                     notestr = "<" + notestr + ">"
 
-                if chord.length != currentLen:
-                    lengthString = str(chord.length)
+                if chord.length != current_len:
+                    length_string = str(chord.length)
 
-                    if chord.length < 1 and len(lengthString) > 1:
-                        notestr += lengthString[1::]
+                    if chord.length < 1 and len(length_string) > 1:
+                        notestr += length_string[1::]
                     else:
                         notestr += str(int(chord.length))
-                    currentLen = chord.length
+                    current_len = chord.length
 
                 string += notestr
-            
+
             string += "|"
 
         return string
 
-    def pitchToNote(pitch):
+    @staticmethod
+    def pitch_to_note(pitch):
+        """Convert the pitch to a letter note"""
 
         if pitch == -1:
             return "r"
@@ -59,28 +64,28 @@ class Representation:
         if pitch in Representation.pitch_dict.keys():
             return Representation.pitch_dict[pitch]
 
-        else:
-            dir = 0
+        direction = 0
 
-            while pitch < Representation.middle_c + 1:
-                pitch += 7
-                dir += 1
-                char = "'"
+        while pitch < Representation.MIDDLE_C + 1:
+            pitch += 7
+            direction += 1
+            char = "'"
 
-            while pitch > Representation.middle_c + 7:
-                pitch -= 7
-                dir += 1
-                char = ","
+        while pitch > Representation.MIDDLE_C + 7:
+            pitch -= 7
+            direction += 1
+            char = ","
 
-            note = Representation.pitch_dict[pitch] + (char * dir)
+        note = Representation.pitch_dict[pitch] + (char * direction)
 
-            return note
+        return note
 
 
     # TODO: maybe removing charrs as we go isn't the most efficient? space or timing wise?
     # Just need to iterate probably
-    def stringToScore(string):
-        global note_dict
+    @staticmethod
+    def string_to_score(string):
+        """Parse the given string and create score list"""
 
         score = []
 
@@ -92,38 +97,40 @@ class Representation:
 
         # While there are still bars to extract
         while len(notes) > 1:
-            [bar, notes] = Representation.extractBar(notes, beats)
+            [bar, notes] = Representation.extract_bar(notes, beats)
             score.append(bar)
 
         return score
 
     # Given a substring beginning with |
     # Return the first bar extracted, and the remaining substring containing the last |
-    def extractBar(substring, beats):
+    @staticmethod
+    def extract_bar(substring : str, beats):
+        """Extract the next bar from the given string"""
 
-        barNotes = substring[1::]
+        bar_notes = substring[1::]
         bar = Bar(0, beats)
         bar.emptyBar()
 
-        while len(barNotes) > 1:
+        while len(bar_notes) > 1:
 
-            ch = barNotes[0]
+            ch = bar_notes[0]
 
             if ch == "|":
                 bar.redoY()
-                return [bar, barNotes]
+                return [bar, bar_notes]
 
             if ch == "<":
-                [chord, barNotes] = Representation.extractChord(barNotes)
+                [chord, bar_notes] = Representation.extract_chord(bar_notes)
                 Representation.current_length = chord.length
 
-            elif ch in Representation.note_dict.keys() or ch == "r":
-                [pitch, barNotes] = Representation.getChordNote(barNotes)
+            elif ch in Representation.NOTE_DICT or ch == "r":
+                [pitch, bar_notes] = Representation.get_chord_note(bar_notes)
 
-                [func, barNotes] = Representation.extractNoteAttributes(barNotes)
+                [func, bar_notes] = Representation.extract_note_attributes(bar_notes)
 
                 # Determining the length of the note
-                [length, barNotes] = Representation.extractLength(barNotes)
+                [length, bar_notes] = Representation.extract_length(bar_notes)
 
                 if length is None:
                     length = Representation.current_length
@@ -138,11 +145,12 @@ class Representation:
             bar.chords.append(chord)
 
         bar.redoY()
-        return [bar, barNotes]
+        return [bar, bar_notes]
 
-    # Given a substring beginning with a length
     # TODO: should default to current_length here rather than once None has been extracted
-    def extractLength(substring):
+    @staticmethod
+    def extract_length(substring):
+        """Extract the length from a substring beginning with the length"""
 
         length = re.search("^(\.?[0-9]+).*", substring)
 
@@ -153,8 +161,9 @@ class Representation:
         return [None, substring]
 
 
-    # Given a substring beginning with ' or ,
-    def extractOctaveIndicators(substring):
+    @staticmethod
+    def extract_octave_indicators(substring):
+        """Given a substring beginning with ' or , extract the octave indicators"""
 
         indicators = re.search("^([',\,]+).*", substring)
         if indicators:
@@ -166,17 +175,19 @@ class Representation:
 
         return [0, substring]
 
-    
-    # Given a substring beginning with a note
-    def getChordNote(substring):
+
+    @staticmethod
+    def get_chord_note(substring):
+        """Given a substring beginning with a note, get the chord"""
 
         note = substring[0]
 
-        [octaveIndicators, substring] = Representation.extractOctaveIndicators(substring[1 : len(substring)])
+        [octave_indicators, substring] = Representation.extract_octave_indicators(
+            substring[1 : len(substring)])
 
-        if note in Representation.note_dict.keys():
-            pitch = Representation.note_dict[note]
-            pitch -= 7 * octaveIndicators
+        if note in Representation.NOTE_DICT:
+            pitch = Representation.NOTE_DICT[note]
+            pitch -= 7 * octave_indicators
 
             return [pitch, substring]
 
@@ -185,17 +196,16 @@ class Representation:
 
             return [pitch, substring]
 
-        
-
         return [None, substring]
 
-
-    def extractNoteAttributes(substring):
-        def passFunc(self):
+    @staticmethod
+    def extract_note_attributes(substring):
+        """Extract note attributes (#, b, natural)"""
+        def pass_func(self):
             pass
 
         if len(substring) == 0:
-            return [passFunc, substring]
+            return [pass_func, substring]
 
         match substring[0]:
             case "#":
@@ -208,32 +218,31 @@ class Representation:
                 return [Note.toggleNatural, substring[1::]]
 
             case _:
-                return [passFunc, substring]
+                return [pass_func, substring]
 
-                
-    # Given a substring beginning with "<"
-    def extractChord(substring):
-        global note_dict 
+    @staticmethod
+    def extract_chord(substring):
+        """Given a substring beginning with "<", extract the chord"""
 
         notes = re.search("^<([a-z',#-]+)>.*", substring)
 
         chord = Chord(-1, 0, 0)
-        chord.removeNote(chord.notes[0])
+        chord.remove_note(chord.notes[0])
 
         substring = substring[notes.start(1)::]
         ch = substring[0]
 
         while ch != ">":
 
-            [pitch, substring] = Representation.getChordNote(substring[0::])
+            [pitch, substring] = Representation.get_chord_note(substring[0::])
             note = chord.addNote(pitch)
 
-            [func, substring] = Representation.extractNoteAttributes(substring)
+            [func, substring] = Representation.extract_note_attributes(substring)
             func(note)
 
             ch = substring[0]
 
-        [length, substring] = Representation.extractLength(substring[1::])
+        [length, substring] = Representation.extract_length(substring[1::])
 
         if length is None:
             chord.length = Representation.current_length
@@ -245,7 +254,9 @@ class Representation:
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]
 
-    def scoreToLilypond(score : list[Bar], beats : int, key : str):
+    @staticmethod
+    def score_to_lilypond(score : list[Bar], beats : int, key : str):
+        """Convert a score to lilypond notation"""
         string = "\\version \"2.26.0\"{ \\fixed c' { \\numericTimeSignature "
 
         string += f"\\time {beats}/4 "
@@ -254,14 +265,12 @@ class Representation:
         pitch = pitch.replace("#", "is").replace("b", "es").lower()
         string += f"\\key {pitch} \\{mode.lower()} "
 
-        open("log.txt", "a").write("\n" + string)
-        
         for bar in score:
             for chord in bar.chords:
-                
+
                 chordstr = ""
                 for note in chord.notes:
-                    notestr = Representation.pitchToNote(note.pitch)
+                    notestr = Representation.pitch_to_note(note.pitch)
 
                     if note.sharp:
                         notestr = notestr[0] + "is" + notestr[1::]
@@ -277,18 +286,8 @@ class Representation:
                 if chord.length < 1:
                     lilypond_length = int((1 / chord.length) * 4)
 
-                elif chord.length == 1:
-                    lilypond_length = 4
-
-                elif chord.length == 4:
-                    lilypond_length = 1
-
-                elif chord.length == 3:
-                    lilypond_length = "2."
-
                 else:
-                    lilypond_length = chord.length
-                
+                    lilypond_length = { 1 : "4", 4 : "1", 3 : "2.", 2 : "2"}.get(chord.length)
 
                 if lilypond_length != Representation.current_length:
                     chordstr += str(lilypond_length)

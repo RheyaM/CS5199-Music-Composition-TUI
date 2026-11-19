@@ -25,7 +25,7 @@ class Bar:
 
 
     # Get the next chord within the current bar
-    def getNextChord(self, chord : Chord) -> Chord:
+    def get_next_chord(self, chord : Chord) -> Chord:
 
         index = self.chords.index(chord)
         if index >= len(self.chords) - 1:
@@ -35,7 +35,7 @@ class Bar:
 
 
     # Get the previous chord
-    def getPrevChord(self, chord):
+    def get_prev_chord(self, chord):
 
         index = self.chords.index(chord)
 
@@ -71,7 +71,7 @@ class Bar:
             elif chord.length < 1:
                 y += 5
 
-            chord = self.getNextChord(chord)
+            chord = self.get_next_chord(chord)
 
         self.endy = y - 2
 
@@ -92,15 +92,15 @@ class Bar:
         else:
             chord.length /= 2
 
-        newLength = chord.length
+        new_length = chord.length
         
         if chord.length == 2 or chord.length == 3:
-            newLength = 1
+            new_length = 1
 
-        newChord = Chord(-1, newLength, chord.y + 5)
-        self.chords.insert(index + 1, newChord)
+        new_chord = Chord(-1, new_length, chord.y + 5)
+        self.chords.insert(index + 1, new_chord)
 
-        return newChord
+        return new_chord
 
     def total_length(self) -> float:
         total : float = 0

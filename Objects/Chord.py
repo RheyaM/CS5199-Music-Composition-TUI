@@ -27,7 +27,7 @@ class Chord:
 
         return newNote
 
-    def removeNote(self, note : Note) -> Note:
+    def remove_note(self, note : Note) -> Note:
         if self.rest:
             return
 
@@ -69,14 +69,14 @@ class Chord:
         self.y += change
 
     def duplicateChord(self):
-        newChord : Chord = Chord(-1, self.length, self.y)
-        newChord.notes = []
+        new_chord : Chord = Chord(-1, self.length, self.y)
+        new_chord.notes = []
 
         for note in self.notes:
-            newChord.addNote(note.pitch)
+            new_chord.addNote(note.pitch)
 
-        newChord.staccato = self.staccato
-        newChord.accent = self.accent
-        newChord.rest = self.rest
+        new_chord.staccato = self.staccato
+        new_chord.accent = self.accent
+        new_chord.rest = self.rest
 
-        return newChord
+        return new_chord

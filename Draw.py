@@ -3,58 +3,69 @@ import math
 
 from Objects.Chord import Chord
 
-middle_c = 9
-
-keys : dict = {"C Major": [], "G Major": [6], "D Major": [6, 9], 
-               "A Major": [6, 9, 5], "E Major": [6, 9, 5, 8],
-               "B Major": [6, 9, 5, 8, 11], "F# Major": [6, 9, 5, 8, 11, 7],
-               "Db Major": [10, 7, 11, 8, 12], "Ab Major": [10, 7, 11, 8], 
-               "Eb Major": [10, 7, 11], "Bb Major": [10, 7], "F Major": [10]}
 
 class Draw:
+    """Class for drawing features onto screen"""
 
-    hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes" , "Opt-Up/Down": "transpose by 1", 
-                 "SHIFT-Up/Down": "transpose by an octave", "SHIFT-Left/Right": "swap notes", 
-                 "[": "decrease note length", "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", "-": "flat", 
-                 "n": "natural", "p" : "Play score", "m" : "Export to PDF"}
+    MIDDLE_C : int = 9
 
-    def drawTreble(pad, x, y):
+    keys : dict = {"C Major": [], "G Major": [6], "D Major": [6, 9],
+                "A Major": [6, 9, 5], "E Major": [6, 9, 5, 8],
+                "B Major": [6, 9, 5, 8, 11], "F# Major": [6, 9, 5, 8, 11, 7],
+                "Db Major": [10, 7, 11, 8, 12], "Ab Major": [10, 7, 11, 8], 
+                "Eb Major": [10, 7, 11], "Bb Major": [10, 7], "F Major": [10]}
+
+    hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes",
+             "Opt-Up/Down": "transpose by 1", "SHIFT-Up/Down": "transpose by an octave", 
+             "SHIFT-Left/Right": "swap notes", "[": "decrease note length", 
+             "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", 
+             "-": "flat", "n": "natural", "p" : "Play score", "m" : "Export to PDF"}
+
+    @staticmethod
+    def draw_treble(pad, x, y):
+        """Draw treble clef"""
         pad.addstr(x, y, "|\\")
         pad.addstr(x + 1, y, "| |")
         pad.addstr(x + 2, y, "|─/")
         pad.addstr(x + 3, y, "|/")
         pad.addstr(x + 4, y - 1, "/|")
-        pad.addstr(x + 5, y - 2, "| |\u2581\u2581")
+        pad.addstr(x + 5, y - 2, "| |▁▁")
         pad.addstr(x + 6, y - 2, "|─/──\\")
-        pad.addstr(x + 7, y - 2, "\ |  |")
-        pad.addstr(x + 8, y - 1, "\u005C|─/")
+        pad.addstr(x + 7, y - 2, "\\ |  |")
+        pad.addstr(x + 8, y - 1, "\\|─/")
         pad.addstr(x + 9, y, "|")
         pad.addstr(x + 10, y - 1, "◯|")
 
-    def drawBeginning(pad, beats, key, middle_c):
+    @staticmethod
+    def draw_beginning(pad, beats, key, MIDDLE_C):
+        """Draw the beginning of the stave, including treble clef, time & key signatures"""
 
         length = 15
 
-        pad.addstr(middle_c - 3, 0, "┎" + ("─" * length))
+        pad.addstr(MIDDLE_C - 3, 0, "┎" + ("─" * length))
 
-        for i in range(middle_c - 1, middle_c + 4, 2):
+        for i in range(MIDDLE_C - 1, MIDDLE_C + 4, 2):
             pad.addstr(i, 0, "┠" + ("─" * length))
 
-        for i in range(middle_c - 2, middle_c + 5, 2):
+        for i in range(MIDDLE_C - 2, MIDDLE_C + 5, 2):
             pad.addstr(i, 0, "┃" + (" " * length))
 
-        pad.addstr(middle_c + 5, 0, "┖" + ("─" * length))
+        pad.addstr(MIDDLE_C + 5, 0, "┖" + ("─" * length))
 
-        Draw.drawTreble(pad, middle_c - 3, 4)
-        Draw.drawTimeSig(pad, middle_c, 10, str(beats), "4")
+        Draw.draw_treble(pad, MIDDLE_C - 3, 4)
+        Draw.draw_time_sig(pad, MIDDLE_C, 10, str(beats), "4")
         Draw.draw_key_sig(pad, 12, key)
-    
-    def drawTimeSig(pad, x, y, num, dom):
-        Draw.emptyStaveRegion(pad, y)
+
+    @staticmethod
+    def draw_time_sig(pad, x, y, num, dom):
+        """Draw the time signature"""
+        Draw.empty_stave_region(pad, y)
         pad.addstr(x, y, num)
         pad.addstr(x + 2, y, dom)
 
+    @staticmethod
     def draw_key_sig(pad, y, key):
+        """Draw the key signature starting at the given y coordinate"""
         if key[1] == "b" or key == "F Major":
             char = "♭"
         else:
@@ -62,57 +73,61 @@ class Draw:
 
         # dir represents which direction the coordinates of the notes must change
         start_y = y
-        for sharp in keys[key]:
+        for sharp in Draw.keys[key]:
             pad.addstr(sharp, start_y, char)
             start_y += 1
 
-
-    def drawRest(pad, chord):
+    @staticmethod
+    def draw_rest(pad, chord):
+        """Draw a rest note"""
         y = chord.y
         if chord.length == 1:
-            pad.addstr(middle_c, y, "╲")
-            pad.addstr(middle_c + 1, y, "╱")
-            pad.addstr(middle_c + 2, y, "╲")
-            pad.addstr(middle_c + 3, y, "C")
+            pad.addstr(Draw.MIDDLE_C, y, "╲")
+            pad.addstr(Draw.MIDDLE_C + 1, y, "╱")
+            pad.addstr(Draw.MIDDLE_C + 2, y, "╲")
+            pad.addstr(Draw.MIDDLE_C + 3, y, "C")
 
         elif chord.length < 1:
             subdivision = 1 / chord.length
             lines = math.log(subdivision, 2)
             for i in range(int(lines)):
-                pad.addstr(middle_c + i, y, "⚈")
+                pad.addstr(Draw.MIDDLE_C + i, y, "⚈")
 
             for i in range(4):
-                pad.addstr(middle_c + i, y + 1, "|")
+                pad.addstr(Draw.MIDDLE_C + i, y + 1, "|")
 
         elif chord.length == 4:
-            pad.addstr(middle_c - 1, y, "▃▃")
+            pad.addstr(Draw.MIDDLE_C - 1, y, "▃▃")
 
         elif chord.length == 2:
-            pad.addstr(middle_c + 2, y, "▀▀")
+            pad.addstr(Draw.MIDDLE_C + 2, y, "▀▀")
 
         elif chord.length == 3:
-            pad.addstr(middle_c + 2, y, "▀▀•")
+            pad.addstr(Draw.MIDDLE_C + 2, y, "▀▀•")
 
-
-    def drawNotes(pad : curses.window, chord : Chord) -> list[int]:
+    @staticmethod
+    def draw_notes(pad : curses.window, chord : Chord) -> list[int]:
+        """Draw a note onto the stave"""
         notes = chord.notes
         y = chord.y
-        noteCoords = []
+        note_coords = []
 
         for note in notes:
-                    
-            noteCoords.append(note.pitch)
+
+            note_coords.append(note.pitch)
             if chord.length >= 2:
                 string = "❨❩"
             else:
                 string = "⚪"
-            
+
             pad.addstr(note.pitch, y, string, curses.color_pair(2))
-            Draw.drawAttributes(pad, note, chord)
+            Draw.draw_attributes(pad, note, chord)
 
-        return noteCoords
+        return note_coords
 
-    def drawAttributes(pad, note, chord):
+    @staticmethod
+    def draw_attributes(pad, note, chord):
+        """Draw note attributes (#, b, natural)"""
         x = note.pitch
         y = chord.y
 
@@ -126,7 +141,9 @@ class Draw:
         if chord.length == 3:
             pad.addstr(x, y+2, "•")
 
-    def drawTie(pad, chord):
+    @staticmethod
+    def draw_tie(pad, chord):
+        """Draw a tie from the current chord to the next"""
         y = chord.y
         x = chord.notes[-1].pitch
 
@@ -134,7 +151,7 @@ class Draw:
         chars = ["\\", "_",  "/"] if x > 5 else ["/", "▔",  "\\"]
         pad.addstr(linex, y + 1, chars[0])
         y += 1
-        
+
         above = pad.instr(x, y + 1, 3).decode("utf-8")
 
 
@@ -142,32 +159,165 @@ class Draw:
             pad.addstr(linex, y + 1, chars[1])
             y += 1
             above = pad.instr(x, y + 1, 3).decode("utf-8")
-            
+
         pad.addstr(linex, y, chars[1] + chars[2])
 
-    def emptyStaveRegion(pad, y):
+    @staticmethod
+    def empty_stave_region(pad, y):
+        """Empty the stave at the given y"""
         for x in range(0, 24):
             pad.addstr(x, y - 1, "    ")
-        for x in range (middle_c - 3, middle_c + 6, 2):
+        for x in range (Draw.MIDDLE_C - 3, Draw.MIDDLE_C + 6, 2):
             pad.addstr(x, y - 1, "────")
 
-    def drawHints(pad, width):
+    @staticmethod
+    def draw_hints(pad, width):
+        """Draw hints at the bottom of the screen"""
         pad.erase()
 
         x = 0
         y = 0
 
-        for key in Draw.hints.keys():
+        for keypress, expl in Draw.hints.items():
 
-            expl = Draw.hints[key]
-
-            totalLen = len(key) + 3 + len(expl)
-            if y + totalLen >= width:
+            total_len = len(keypress) + 3 + len(expl)
+            if y + total_len >= width:
                 x += 1
                 y = 0
 
-            pad.addstr(x, y, key, curses.A_STANDOUT)
-            y += len(key) + 1
+            pad.addstr(x, y, keypress, curses.A_STANDOUT)
+            y += len(keypress) + 1
             pad.addstr(x, y, expl)
             y += len(expl) + 3
-            
+
+    def draw_chord(pad, chord):
+
+    y = chord.y
+
+    Draw.empty_stave_region(pad, y)
+
+    if not chord.rest:
+        note_coords = Draw.draw_notes(pad, chord)
+        drawStem(pad, chord, note_coords)
+
+    else:
+        Draw.draw_rest(pad, chord)
+
+def drawStem(pad : curses.window, chord : Chord, note_coords : list[int]):
+    y = chord.y
+    furthestdist = determineFurthestDist(note_coords)
+
+    if furthestdist > 0: # Stem on the right, going up
+        side = y + 1
+        start = note_coords[0] - 6
+
+        draw_chord_attributes(pad, chord, note_coords[-1], 1)
+    else: # Stem on the left, going down
+        side = y
+        start = note_coords[0]
+
+        draw_chord_attributes(pad, chord, note_coords[0], -1)
+
+    noteRange = abs(note_coords[0] - note_coords[-1])
+
+    if chord.length != 4:
+        for i in range(noteRange + 5):
+            x = start + i + 1
+            if x not in note_coords and x >= 0 and x <= stave_height:
+                pad.addstr(x, side, "\u2502")
+
+
+    if chord.length < 1:
+
+        subdivision = 1 / chord.length
+        lines = int(math.log(subdivision, 2))
+
+        if furthestdist > 0: #on the right, going up (at the top)
+            start = start + 1
+            char = "⎞"
+        else:
+            start = noteRange + 6 + start - lines
+            char = "⎠"
+
+        for i in range(lines):
+            pad.addstr(start + i, side + 1, char)
+
+    def determineFurthestDist(note_coords : list[int]):
+        furthestdist = 0
+        for n in note_coords:
+            dist = n - (Draw.MIDDLE_C + 1)
+            if abs(dist) > abs(furthestdist):
+                furthestdist = dist
+
+        note_coords.sort()
+
+        return furthestdist
+
+    def draw_chord_attributes(pad, chord, lastNote, dir):
+
+        current_coord = lastNote + dir
+
+        if chord.staccato:
+            pad.addstr(current_coord, chord.y, "•")
+            current_coord = current_coord + dir
+        if chord.accent:
+            pad.addstr(current_coord, chord.y, ">")
+
+    def draw_bars_from(score, pads, bar_index, stave_height, beats, key):
+        """Alternative to draw_bar, draw all bars starting from score[bar_index]."""
+        for i in range(bar_index, len(score)):
+            draw_bar(score, pads, i, stave_height, beats, key)
+
+        for bar in score:
+            for chord in bar.chords:
+                if chord.tie and not chord.rest:
+                    Draw.draw_tie(pads[bar.pad], chord)
+
+    def draw_bar(score, pads, bar_index, stave_height, beats, key):
+            """Draw bar score[bar_index] onto the stave."""
+
+            middle_c = Draw.MIDDLE_C
+
+            bar = score[bar_index]
+            pad = pads[bar.pad]
+
+            start_y = bar.y
+            end_y = bar.endy
+
+            length = end_y - start_y - 1
+
+            for i in range(0, stave_height - 1):
+                pad.addstr(i, start_y, " " * (length + 2))
+
+            pad.addstr(middle_c - 3, start_y, "┰" + ("─" * length) + "┒")
+            for i in range(middle_c - 2, middle_c + 5, 2):
+                pad.addstr(i, start_y, "┃" + (" " * length) + "┃")
+            for i in range(middle_c - 1, middle_c + 4, 2):
+                pad.addstr(i, start_y, "┠" + ("─" * length) + "┨")
+            pad.addstr(middle_c + 5, start_y, "┸" + ("─" * length) + "┚")
+
+            if start_y == 0:
+                pad.addstr(middle_c - 3, start_y, "┎")
+                pad.addstr(middle_c + 5, start_y, "┖")
+
+            for chord in bar.chords:
+                Draw.draw_chord(pad, chord)
+
+            if bar_index == 0:
+                Draw.draw_beginning(pad, beats, key, middle_c)
+
+            # If a bar is the last on its pad, or the last in score, remove any further characters
+            if (bar_index < len(score) - 1 and score[bar_index + 1].pad > score[bar_index].pad) or bar_index == len(score) - 1:
+                [height, width] = pad.getmaxyx()
+                for i in range(height):
+                    pad.move(i, end_y + 1)
+                    pad.clrtoeol()
+
+    def draw_entire_score(score, pads, stave_height, beats, key):
+        for i in range(len(score)):
+            draw_bar(score, pads, i, stave_height, beats, key)
+
+        for bar in score:
+            for chord in bar.chords:
+                if chord.tie and not chord.rest:
+                    Draw.draw_tie(pads[bar.pad], chord)
