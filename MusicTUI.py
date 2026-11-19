@@ -76,10 +76,6 @@ def main(stdscr : curses.window) -> None:
 
     while True:
 
-        if string_edit_mode:
-            string_mode()
-            continue
-
         char : chr = stdscr.getkey()
         change_made : bool = True
 
@@ -172,11 +168,13 @@ def main(stdscr : curses.window) -> None:
             case "t":
                 time_sig = create_menu(stdscr, "time")
                 change_time_signature(int(time_sig[0]))
+                set_curses_modes(stdscr)
 
             case "k":
                 key = create_menu(stdscr, "key")
                 Draw.draw_entire_score(score, pads, stave_height, beats, key)
                 navigate_to_note()
+                set_curses_modes(stdscr)
 
             case "h":
                 string_edit_mode = not string_edit_mode
@@ -267,6 +265,7 @@ def set_curses_modes(stdscr):
     # Setting the cursor to invisible
     curses.curs_set(0)
 
+    curses.noecho()
     curses.cbreak()
 
     stdscr.keypad(True)
@@ -353,14 +352,14 @@ def change_time_signature(new_beats):
         rests_to_add = split_chord(new_chord)
         bar.chords = bar.chords + rests_to_add
 
-
     for bar in new_score:
         bar.redo_y()
 
-    redo_all_pads()
-
     beats = new_beats
     score = new_score
+
+    redo_all_pads()
+    shift_visible(0)
 
     Draw.draw_entire_score(score, pads, stave_height, beats, key)
     navigate_to_note()
@@ -598,8 +597,8 @@ def load(stdscr : curses.window) -> None:
 def save(stdscr : curses.window, textbox : curses.window) -> None:
     """Save the current score to the current file name"""
     if file != "":
-        with open(file, "a", encoding="utf-8") as myfile:
-            myfile.write("\n" + textbox.instr(1, 0).decode("utf-8"))
+        with open(file, "w", encoding="utf-8") as myfile:
+            myfile.write(textbox.instr(1, 0).decode("utf-8"))
 
         myfile.close()
     else:
@@ -1075,11 +1074,11 @@ def parse_note(stave_pad, note):
     if not current_chord.rest:
 
         # If regular note (Replace entire chord)
-        if 97 >= note_code <= 103:
+        if 97 <= note_code <= 103:
             current_note = current_chord.replace_chord(x)
 
         # If SHIFT + note
-        elif 65 >= note_code <= 71:
+        elif 65 <= note_code <= 71:
             current_note = current_chord.add_note(x)
     else:
         # Current chord is a rest

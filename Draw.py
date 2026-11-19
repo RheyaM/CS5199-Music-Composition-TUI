@@ -17,10 +17,11 @@ class Draw:
                 "Eb Major": [10, 7, 11], "Bb Major": [10, 7], "F Major": [10]}
 
     hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes",
-             "Opt-Up/Down": "transpose by 1", "SHIFT-Up/Down": "transpose by an octave", 
+             "Opt-Up/Down": "change pitch", "SHIFT-Up/Down": "change octave", 
              "SHIFT-Left/Right": "swap notes", "[": "decrease note length", 
              "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", 
-             "-": "flat", "n": "natural", "p" : "Play score", "m" : "Export to PDF", "k" : "Change key signature"}
+             "-": "flat", "n": "natural", "p" : "play score", "m" : "export to PDF",
+             "k" : "change key signature", "t": "change time signature"}
 
     @staticmethod
     def draw_treble(pad, x, y):
@@ -167,7 +168,7 @@ class Draw:
     @staticmethod
     def empty_stave_region(pad, y):
         """Empty the stave at the given y"""
-        for x in range(0, 24):
+        for x in range(0, 26):
             pad.addstr(x, y - 1, "    ")
         for x in range (Draw.MIDDLE_C - 3, Draw.MIDDLE_C + 6, 2):
             pad.addstr(x, y - 1, "────")
@@ -296,6 +297,9 @@ class Draw:
         start_y = bar.y
         end_y = bar.endy
 
+        open("log.txt", "a").write("\nDrawing bar at start_y: " + str(start_y))
+
+
         length = end_y - start_y - 1
 
         for i in range(0, stave_height - 1):
@@ -328,6 +332,7 @@ class Draw:
     @staticmethod
     def draw_entire_score(score, pads, stave_height, beats, key):
         """Redraw entire score"""
+        open("log.txt", "a").write("\nlen(score): " + str(len(score)))
         for i in range(len(score)):
             Draw.draw_bar(score, pads, i, stave_height, beats, key)
 
