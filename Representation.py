@@ -1,13 +1,15 @@
+"""Importing regex module"""
 import re
 from Objects.Bar import Bar
 from Objects.Chord import Chord
 from Objects.Note import Note
 
 class Representation:
+    """Class for converting score to strings and vice versa"""
 
     MIDDLE_C : int = 9
 
-    NOTE_DICT : dict = {"c": MIDDLE_C + 7, "d": MIDDLE_C + 6, "e": MIDDLE_C + 5, "f": MIDDLE_C + 4, 
+    NOTE_DICT : dict = {"c": MIDDLE_C + 7, "d": MIDDLE_C + 6, "e": MIDDLE_C + 5, "f": MIDDLE_C + 4,
                         "g": MIDDLE_C + 3, "a": MIDDLE_C + 2, "b": MIDDLE_C + 1}
     pitch_dict = {v: k for k, v in NOTE_DICT.items()}
 
@@ -103,11 +105,10 @@ class Representation:
 
         return score
 
-    # Given a substring beginning with |
-    # Return the first bar extracted, and the remaining substring containing the last |
     @staticmethod
     def extract_bar(substring : str, beats):
-        """Extract the next bar from the given string"""
+        """Given a substring beginning with |, return the first bar extracted, 
+        and the remaining substring containing the last |"""
 
         bar_notes = substring[1::]
         bar = Bar(0, beats)
@@ -128,7 +129,7 @@ class Representation:
             elif ch in Representation.NOTE_DICT or ch == "r":
                 [pitch, bar_notes] = Representation.get_chord_note(bar_notes)
 
-                [func, bar_notes] = Representation.extract_note_attributes(bar_notes)
+                [attribute, bar_notes] = Representation.extract_note_attributes(bar_notes)
 
                 # Determining the length of the note
                 [length, bar_notes] = Representation.extract_length(bar_notes)
@@ -140,8 +141,8 @@ class Representation:
 
                 chord = Chord(pitch, length, 0)
 
-                func(chord.notes[0])
-
+                if attribute is not None:
+                    chord.notes[0].toggle_attribute(attribute)
 
             bar.chords.append(chord)
 
@@ -200,26 +201,24 @@ class Representation:
         return [None, substring]
 
     @staticmethod
-    def extract_note_attributes(substring):
+    def extract_note_attributes(substring : str) -> list[str, str]:
         """Extract note attributes (#, b, natural)"""
-        def pass_func(self):
-            pass
 
         if len(substring) == 0:
-            return [pass_func, substring]
+            return [None, substring]
 
         match substring[0]:
             case "#":
-                return [Note.toggle_attribute("sharp"), substring[1::]]
+                return ["sharp", substring[1::]]
 
             case "-":
-                return [Note.toggle_attribute("flat"), substring[1::]]
+                return ["flat", substring[1::]]
 
             case "n":
-                return [Note.toggle_attribute("natural"), substring[1::]]
+                return ["natural", substring[1::]]
 
             case _:
-                return [pass_func, substring]
+                return [None, substring]
 
     @staticmethod
     def extract_chord(substring):
@@ -238,8 +237,8 @@ class Representation:
             [pitch, substring] = Representation.get_chord_note(substring[0::])
             note = chord.add_note(pitch)
 
-            [func, substring] = Representation.extract_note_attributes(substring)
-            func(note)
+            [attribute, substring] = Representation.extract_note_attributes(substring)
+            note.toggle_attribute(attribute)
 
             ch = substring[0]
 

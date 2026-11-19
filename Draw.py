@@ -1,3 +1,4 @@
+
 import curses
 import math
 
@@ -19,7 +20,7 @@ class Draw:
              "Opt-Up/Down": "transpose by 1", "SHIFT-Up/Down": "transpose by an octave", 
              "SHIFT-Left/Right": "swap notes", "[": "decrease note length", 
              "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", 
-             "-": "flat", "n": "natural", "p" : "Play score", "m" : "Export to PDF"}
+             "-": "flat", "n": "natural", "p" : "Play score", "m" : "Export to PDF", "k" : "Change key signature"}
 
     @staticmethod
     def draw_treble(pad, x, y):

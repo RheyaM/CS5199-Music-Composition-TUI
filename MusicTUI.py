@@ -1,15 +1,11 @@
 """Python module providing screen painting and window creation functionality"""
 import curses
-from cursesmenu import CursesMenu
-from curses import wrapper
-from curses.textpad import Textbox, rectangle
-
 import subprocess
 import sys
-
-"""Importing math module for logs"""
 import math
-
+from curses import wrapper
+from curses.textpad import Textbox, rectangle
+from cursesmenu import CursesMenu
 from Objects.Bar import Bar
 from Objects.Chord import Chord
 from Objects.Note import Note
@@ -40,7 +36,8 @@ current_bar : int = 0 # Index of current bar object in score[]
 current_chord : Chord = score[0].chords[0] # Chord object
 current_note : Note = current_chord.notes[0] # Note object
 
-# prev_stack = for each change to the score, store the string representation and the current bar, chord and note
+# prev_stack = for each change to the score, store the string representation
+# and the current bar, chord and note
 prev_stack : list[[str, int, int, int]] = [["B:4.|r1rrr|rrrr|", current_bar, 0, 0]]
 
 # stave_height - to determine how many octaves we can use
@@ -51,7 +48,6 @@ stdscr_height : int = 0
 
 string_edit_mode = False
 
-# TODO: allow higher/lower notes past the stave
 def main(stdscr : curses.window) -> None:
     global stdscr_width
     global stdscr_height
@@ -85,7 +81,7 @@ def main(stdscr : curses.window) -> None:
             continue
 
         char : chr = stdscr.getkey()
-        change_made = True
+        change_made : bool = True
 
         match char:
             case "q":
@@ -164,7 +160,6 @@ def main(stdscr : curses.window) -> None:
 
             case "l" | "L":
                 load(stdscr)
-                change_made = False
 
             case "z":
                 prev_stack = undo()
@@ -557,13 +552,14 @@ def load(stdscr : curses.window) -> None:
     global current_chord
     global current_note
     global visible
+    global prev_stack
 
     stdscr.clear()
     for pad in pads:
         pad.clear()
 
     stdscr.addstr(stdscr_height - 7, 1, "Input your file name")
-    stdscr.addstr(stdscr_height - 1, 1, "^G: Confirm          To cancel, leave empty")
+    stdscr.addstr(stdscr_height - 1, 1, "To cancel, leave empty")
 
     textinput = curses.newwin(2, 41, stdscr_height - 5, 2)
     box = Textbox(textinput)
@@ -581,6 +577,7 @@ def load(stdscr : curses.window) -> None:
         file = text #Will include .txt
 
         score = Representation.string_to_score(string)
+        prev_stack = []
 
     except FileNotFoundError as e:
         with open("log.txt", "r", encoding="utf8") as file:
@@ -594,8 +591,7 @@ def load(stdscr : curses.window) -> None:
     Draw.draw_entire_score(score, pads, stave_height, beats, key)
     navigate_to_note()
 
-    visible_pads_num = (stdscr_height - 6)//stave_height
-    visible = list(range(0, len(pads)))[:visible_pads_num]
+    shift_visible(0)
 
     refresh_visible_pads(stdscr)
 
@@ -616,7 +612,7 @@ def save_as(stdscr : curses.window, textbox : curses.window) -> None:
     stdscr.clear()
 
     stdscr.addstr(stdscr_height - 7, 1, "Input your file name")
-    stdscr.addstr(stdscr_height - 1, 1, "^G: Confirm          To cancel, leave empty")
+    stdscr.addstr(stdscr_height - 1, 1, "To cancel, leave empty")
 
     textinput = curses.newwin(2, 41, stdscr_height - 5, 2)
     box = Textbox(textinput)
@@ -1026,7 +1022,7 @@ def transpose(direction, stave_pad, change):
 
     # current_chord and current_note are not None
     if current_note.pitch != -1:
-            
+
         if direction == "up":
             new_pitch = current_note.pitch - change
         else:

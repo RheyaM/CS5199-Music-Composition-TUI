@@ -1,3 +1,4 @@
+"""Module for creating .wav files"""
 import music
 import pygame
 from pygame import mixer
