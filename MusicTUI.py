@@ -46,8 +46,6 @@ stave_height : int = 26
 stdscr_width : int = 0
 stdscr_height : int = 0
 
-string_edit_mode = False
-
 def main(stdscr : curses.window) -> None:
     global stdscr_width
     global stdscr_height
@@ -177,9 +175,7 @@ def main(stdscr : curses.window) -> None:
                 set_curses_modes(stdscr)
 
             case "h":
-                string_edit_mode = not string_edit_mode
-                if string_edit_mode:
-                    string_mode()
+                string_mode()
 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -225,6 +221,10 @@ def main(stdscr : curses.window) -> None:
 def string_mode():
     """Switching to string mode"""
     global score
+    global current_bar
+    global current_chord
+    global current_note
+    
 
     writing_box = curses.newwin(2, stdscr_width - 3, stdscr_height - 5, 0)
     writing_box.addstr(Representation.score_to_string(score, beats))
@@ -242,6 +242,17 @@ def string_mode():
 
     try:
         score = Representation.string_to_score(text)
+
+        current_bar = 0
+        current_chord = score[current_bar].chords[0]
+        current_note = current_chord.notes[0]
+
+        for bar in score:
+            bar.redo_y()
+        redo_all_pads()
+        navigate_to_note()
+
+        Draw.draw_entire_score(score, pads, stave_height, beats, key)
 
     except Exception:
         open("log.txt", "a", encoding="utf-8").write("\nstring_to_score error")

@@ -102,10 +102,10 @@ class Draw:
             pad.addstr(Draw.MIDDLE_C - 1, y, "▃▃")
 
         elif chord.length == 2:
-            pad.addstr(Draw.MIDDLE_C + 2, y, "▀▀")
+            pad.addstr(Draw.MIDDLE_C + 1, y, "▀▀")
 
         elif chord.length == 3:
-            pad.addstr(Draw.MIDDLE_C + 2, y, "▀▀•")
+            pad.addstr(Draw.MIDDLE_C + 1, y, "▀▀•")
 
     @staticmethod
     def draw_notes(pad : curses.window, chord : Chord) -> list[int]:
