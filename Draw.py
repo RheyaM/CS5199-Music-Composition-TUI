@@ -131,12 +131,13 @@ class Draw:
         x = note.pitch
         y = chord.y
 
-        if note.sharp:
-            pad.addstr(x, y-1, "#")
-        elif note.flat:
-            pad.addstr(x, y-1, "♭", curses.A_BOLD)
-        elif note.natural:
-            pad.addstr(x, y-1, "♮", curses.A_BOLD)
+        match note.attribute:
+            case "sharp":
+                pad.addstr(x, y-1, "#")
+            case "flat":
+                pad.addstr(x, y-1, "♭", curses.A_BOLD)
+            case "natural":
+                pad.addstr(x, y-1, "♮", curses.A_BOLD)
 
         if chord.length == 3:
             pad.addstr(x, y+2, "•")
@@ -200,15 +201,16 @@ class Draw:
 
         if not chord.rest:
             note_coords = Draw.draw_notes(pad, chord)
-            Draw.drawStem(pad, chord, note_coords, stave_height)
+            Draw.draw_stem(pad, chord, note_coords, stave_height)
 
         else:
             Draw.draw_rest(pad, chord)
 
     @staticmethod
-    def drawStem(pad : curses.window, chord : Chord, note_coords : list[int], stave_height : int):
+    def draw_stem(pad : curses.window, chord : Chord, note_coords : list[int], stave_height : int):
+        """Draw the stem of the chord"""
         y = chord.y
-        furthestdist = Draw.determineFurthestDist(note_coords)
+        furthestdist = Draw.determine_furthest_dist(note_coords)
 
         if furthestdist > 0: # Stem on the right, going up
             side = y + 1
@@ -221,10 +223,10 @@ class Draw:
 
             Draw.draw_chord_attributes(pad, chord, note_coords[0], -1)
 
-        noteRange = abs(note_coords[0] - note_coords[-1])
+        note_range = abs(note_coords[0] - note_coords[-1])
 
         if chord.length != 4:
-            for i in range(noteRange + 5):
+            for i in range(note_range + 5):
                 x = start + i + 1
                 if x not in note_coords and x >= 0 and x <= stave_height:
                     pad.addstr(x, side, "\u2502")
@@ -239,14 +241,15 @@ class Draw:
                 start = start + 1
                 char = "⎞"
             else:
-                start = noteRange + 6 + start - lines
+                start = note_range + 6 + start - lines
                 char = "⎠"
 
             for i in range(lines):
                 pad.addstr(start + i, side + 1, char)
 
     @staticmethod
-    def determineFurthestDist(note_coords : list[int]):
+    def determine_furthest_dist(note_coords : list[int]):
+        """Determine the furthest distance from the middle line in the chord"""
         furthestdist = 0
         for n in note_coords:
             dist = n - (Draw.MIDDLE_C + 1)
@@ -258,13 +261,14 @@ class Draw:
         return furthestdist
 
     @staticmethod
-    def draw_chord_attributes(pad, chord, lastNote, dir):
+    def draw_chord_attributes(pad, chord, last_note, direction):
+        """Draw chord attributes (staccato, accent)"""
 
-        current_coord = lastNote + dir
+        current_coord = last_note + direction
 
         if chord.staccato:
             pad.addstr(current_coord, chord.y, "•")
-            current_coord = current_coord + dir
+            current_coord = current_coord + direction
         if chord.accent:
             pad.addstr(current_coord, chord.y, ">")
 
@@ -272,7 +276,7 @@ class Draw:
     def draw_bars_from(score, pads, bar_index, stave_height, beats, key):
         """Alternative to draw_bar, draw all bars starting from score[bar_index]."""
         for i in range(bar_index, len(score)):
-            draw_bar(score, pads, i, stave_height, beats, key)
+            Draw.draw_bar(score, pads, i, stave_height, beats, key)
 
         for bar in score:
             for chord in bar.chords:
@@ -322,8 +326,9 @@ class Draw:
 
     @staticmethod
     def draw_entire_score(score, pads, stave_height, beats, key):
+        """Redraw entire score"""
         for i in range(len(score)):
-            draw_bar(score, pads, i, stave_height, beats, key)
+            Draw.draw_bar(score, pads, i, stave_height, beats, key)
 
         for bar in score:
             for chord in bar.chords:

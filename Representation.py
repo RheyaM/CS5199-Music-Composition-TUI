@@ -29,12 +29,13 @@ class Representation:
                 for note in chord.notes:
                     notestr += Representation.pitch_to_note(note.pitch)
 
-                    if note.sharp:
-                        notestr += "#"
-                    elif note.flat:
-                        notestr += "-"
-                    elif note.natural:
-                        notestr += "n"
+                    match note.attribute:
+                        case "sharp":
+                            notestr += "#"
+                        case "flat":
+                            notestr += "-"
+                        case "natural":
+                            notestr += "n"
 
                 if len(chord.notes) > 1:
                     notestr = "<" + notestr + ">"

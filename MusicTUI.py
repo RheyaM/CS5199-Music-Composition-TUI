@@ -775,7 +775,7 @@ def inc_length():
     if index == len(score[current_bar].chords) - 1 and current_chord.rest:
         return
 
-    if current_chord.length == 2 or current_chord.length == 3 or current_chord.length == 4:
+    if current_chord.length in (2, 3, 4):
         if index != len(score[current_bar].chords) - 1:
             current_chord.length += 1
         override_chords(current_bar, current_chord, 1)
@@ -789,7 +789,7 @@ def inc_length():
         override_chords(current_bar, current_chord, length)
 
     redo_all_pads()
-    Draw.draw_bars_from(current_bar)
+    Draw.draw_bars_from(score, pads, current_bar, stave_height, beats, key)
     navigate_to_note()
 
 # Note: the space to override will always be <= 1
@@ -965,10 +965,10 @@ def horizontal_navigation(direction):
         else:
             Draw.draw_bar(score, pads, -1, stave_height, beats, key)
 
-        change_to_score(prev_stack, Representation.score_to_string(score, beats))
+        change_to_score(Representation.score_to_string(score, beats))
 
 
-    shift_visible(visible, score[current_bar].pad)
+    shift_visible(score[current_bar].pad)
     navigate_to_note()
 
 def move_left(bar_index : int, chord : Chord) -> list[int, Chord]:
