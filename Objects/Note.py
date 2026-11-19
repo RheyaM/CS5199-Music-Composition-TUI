@@ -1,23 +1,26 @@
 class Note:
     def __init__(self, pitch : int):
         self.pitch = pitch #Integer (x-coord on the stave)
-        self.sharp = False
-        self.flat = False
-        self.natural = False
+        self.attribute = None
 
     def toggleSharp(self):
-        self.sharp = not self.sharp
 
-        if self.sharp:
-            self.natural = False
-            self.flat = False
+        if self.attribute == "sharp":
+            self.attribute = None
+        else:
+            self.attribute = "sharp"
     
     def toggleFlat(self):
-        self.flat = not self.flat
+        if self.attribute == "flat":
+            self.attribute = None
+        else:
+            self.attribute = "flat"
 
-        if self.flat:
-            self.natural = False
-            self.sharp = False
+    def toggle_attribute(self, newattr):
+        if self.attribute == newattr:
+            self.attribute = None
+        else:
+            self.attribute = newattr
     
     def toggleNatural(self):
         self.natural = not self.natural

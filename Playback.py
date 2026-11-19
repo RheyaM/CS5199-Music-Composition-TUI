@@ -98,13 +98,13 @@ class Playback:
 
             dict_pitch -= (12 * to_multiply)
 
-            if note.sharp:
+            if note.attribute == "sharp":
                 dict_pitch += 1
 
-            elif note.flat:
+            elif note.attribute == "flat":
                 dict_pitch -= 1
 
-            elif note.pitch - (7 * (note.pitch//7)) in keys[key]:
+            elif note.pitch - (7 * (note.pitch//7)) in keys[key] and note.attribute != "natural":
 
                 if key[1] == "b" or key == "F Major":
                     dict_pitch -= 1

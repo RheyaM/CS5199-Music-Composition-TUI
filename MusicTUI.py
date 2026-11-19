@@ -670,8 +670,8 @@ def shift(pad : curses.window, direction : str):
 
         current_bar = new_bar
 
-        Draw.draw_chord(pad, to_switch)
-        Draw.draw_chord(pad, current_chord)
+        Draw.draw_chord(pad, to_switch, stave_height)
+        Draw.draw_chord(pad, current_chord, stave_height)
         navigate_to_note()
 
 # TODO: only redo ys from the changed bar
@@ -880,18 +880,14 @@ def get_current_pad():
 def toggle_note_attribute(pad : curses.window, attr : str):
     """Toggle the note attributes"""
     match attr:
-        case "sharp":
-            current_note.toggleSharp()
-        case "flat":
-            current_note.toggleFlat()
-        case "natural":
-            current_note.toggleNatural()
+        case "sharp" | "flat" | "natural":
+            current_note.toggle_attribute(attr)
         case "accent":
             current_chord.toggle_accent()
         case "staccato":
             current_chord.toggle_staccato()
 
-    Draw.draw_chord(pad, current_chord)
+    Draw.draw_chord(pad, current_chord, stave_height)
     navigate_to_note()
 
 def navigate_away_from():
@@ -1020,7 +1016,7 @@ def vertical_navigation(pad, direction):
         if current_chord.get_other_note(current_note, add):
             current_note = current_chord.get_other_note(current_note, add)
 
-    Draw.draw_chord(pad, current_chord)
+    Draw.draw_chord(pad, current_chord, stave_height)
     navigate_to_note()
 
 # TODO: deal with a note already being in that position
@@ -1043,7 +1039,7 @@ def transpose(direction, stave_pad, change):
         current_chord.remove_note(current_note)
         current_note = current_chord.add_note(new_pitch)
 
-        Draw.draw_chord(stave_pad, current_chord)
+        Draw.draw_chord(stave_pad, current_chord, stave_height)
         navigate_to_note()
 
 def get_current_coords():
@@ -1060,7 +1056,7 @@ def remove_note(pad):
     if not current_chord.rest:
         current_note = current_chord.remove_note(current_note)
 
-        Draw.draw_chord(pad, current_chord)
+        Draw.draw_chord(pad, current_chord, stave_height)
 
         if current_chord.rest:
             [prev_bar, prev_chord] = move_left(current_bar, current_chord)
@@ -1099,7 +1095,7 @@ def parse_note(stave_pad, note):
         current_chord = new_chord
         current_note = current_chord.notes[0]
 
-    Draw.draw_chord(stave_pad, current_chord)
+    Draw.draw_chord(stave_pad, current_chord, stave_height)
     navigate_to_note()
 
 wrapper(main)

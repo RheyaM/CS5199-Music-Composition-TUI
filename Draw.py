@@ -190,58 +190,62 @@ class Draw:
             pad.addstr(x, y, expl)
             y += len(expl) + 3
 
-    def draw_chord(pad, chord):
+    @staticmethod
+    def draw_chord(pad, chord, stave_height):
+        """Draw the given chord"""
 
-    y = chord.y
+        y = chord.y
 
-    Draw.empty_stave_region(pad, y)
+        Draw.empty_stave_region(pad, y)
 
-    if not chord.rest:
-        note_coords = Draw.draw_notes(pad, chord)
-        drawStem(pad, chord, note_coords)
+        if not chord.rest:
+            note_coords = Draw.draw_notes(pad, chord)
+            Draw.drawStem(pad, chord, note_coords, stave_height)
 
-    else:
-        Draw.draw_rest(pad, chord)
-
-def drawStem(pad : curses.window, chord : Chord, note_coords : list[int]):
-    y = chord.y
-    furthestdist = determineFurthestDist(note_coords)
-
-    if furthestdist > 0: # Stem on the right, going up
-        side = y + 1
-        start = note_coords[0] - 6
-
-        draw_chord_attributes(pad, chord, note_coords[-1], 1)
-    else: # Stem on the left, going down
-        side = y
-        start = note_coords[0]
-
-        draw_chord_attributes(pad, chord, note_coords[0], -1)
-
-    noteRange = abs(note_coords[0] - note_coords[-1])
-
-    if chord.length != 4:
-        for i in range(noteRange + 5):
-            x = start + i + 1
-            if x not in note_coords and x >= 0 and x <= stave_height:
-                pad.addstr(x, side, "\u2502")
-
-
-    if chord.length < 1:
-
-        subdivision = 1 / chord.length
-        lines = int(math.log(subdivision, 2))
-
-        if furthestdist > 0: #on the right, going up (at the top)
-            start = start + 1
-            char = "⎞"
         else:
-            start = noteRange + 6 + start - lines
-            char = "⎠"
+            Draw.draw_rest(pad, chord)
 
-        for i in range(lines):
-            pad.addstr(start + i, side + 1, char)
+    @staticmethod
+    def drawStem(pad : curses.window, chord : Chord, note_coords : list[int], stave_height : int):
+        y = chord.y
+        furthestdist = Draw.determineFurthestDist(note_coords)
 
+        if furthestdist > 0: # Stem on the right, going up
+            side = y + 1
+            start = note_coords[0] - 6
+
+            Draw.draw_chord_attributes(pad, chord, note_coords[-1], 1)
+        else: # Stem on the left, going down
+            side = y
+            start = note_coords[0]
+
+            Draw.draw_chord_attributes(pad, chord, note_coords[0], -1)
+
+        noteRange = abs(note_coords[0] - note_coords[-1])
+
+        if chord.length != 4:
+            for i in range(noteRange + 5):
+                x = start + i + 1
+                if x not in note_coords and x >= 0 and x <= stave_height:
+                    pad.addstr(x, side, "\u2502")
+
+
+        if chord.length < 1:
+
+            subdivision = 1 / chord.length
+            lines = int(math.log(subdivision, 2))
+
+            if furthestdist > 0: #on the right, going up (at the top)
+                start = start + 1
+                char = "⎞"
+            else:
+                start = noteRange + 6 + start - lines
+                char = "⎠"
+
+            for i in range(lines):
+                pad.addstr(start + i, side + 1, char)
+
+    @staticmethod
     def determineFurthestDist(note_coords : list[int]):
         furthestdist = 0
         for n in note_coords:
@@ -253,6 +257,7 @@ def drawStem(pad : curses.window, chord : Chord, note_coords : list[int]):
 
         return furthestdist
 
+    @staticmethod
     def draw_chord_attributes(pad, chord, lastNote, dir):
 
         current_coord = lastNote + dir
@@ -263,6 +268,7 @@ def drawStem(pad : curses.window, chord : Chord, note_coords : list[int]):
         if chord.accent:
             pad.addstr(current_coord, chord.y, ">")
 
+    @staticmethod
     def draw_bars_from(score, pads, bar_index, stave_height, beats, key):
         """Alternative to draw_bar, draw all bars starting from score[bar_index]."""
         for i in range(bar_index, len(score)):
@@ -273,46 +279,48 @@ def drawStem(pad : curses.window, chord : Chord, note_coords : list[int]):
                 if chord.tie and not chord.rest:
                     Draw.draw_tie(pads[bar.pad], chord)
 
+    @staticmethod
     def draw_bar(score, pads, bar_index, stave_height, beats, key):
-            """Draw bar score[bar_index] onto the stave."""
+        """Draw bar score[bar_index] onto the stave."""
 
-            middle_c = Draw.MIDDLE_C
+        middle_c = Draw.MIDDLE_C
 
-            bar = score[bar_index]
-            pad = pads[bar.pad]
+        bar = score[bar_index]
+        pad = pads[bar.pad]
 
-            start_y = bar.y
-            end_y = bar.endy
+        start_y = bar.y
+        end_y = bar.endy
 
-            length = end_y - start_y - 1
+        length = end_y - start_y - 1
 
-            for i in range(0, stave_height - 1):
-                pad.addstr(i, start_y, " " * (length + 2))
+        for i in range(0, stave_height - 1):
+            pad.addstr(i, start_y, " " * (length + 2))
 
-            pad.addstr(middle_c - 3, start_y, "┰" + ("─" * length) + "┒")
-            for i in range(middle_c - 2, middle_c + 5, 2):
-                pad.addstr(i, start_y, "┃" + (" " * length) + "┃")
-            for i in range(middle_c - 1, middle_c + 4, 2):
-                pad.addstr(i, start_y, "┠" + ("─" * length) + "┨")
-            pad.addstr(middle_c + 5, start_y, "┸" + ("─" * length) + "┚")
+        pad.addstr(middle_c - 3, start_y, "┰" + ("─" * length) + "┒")
+        for i in range(middle_c - 2, middle_c + 5, 2):
+            pad.addstr(i, start_y, "┃" + (" " * length) + "┃")
+        for i in range(middle_c - 1, middle_c + 4, 2):
+            pad.addstr(i, start_y, "┠" + ("─" * length) + "┨")
+        pad.addstr(middle_c + 5, start_y, "┸" + ("─" * length) + "┚")
 
-            if start_y == 0:
-                pad.addstr(middle_c - 3, start_y, "┎")
-                pad.addstr(middle_c + 5, start_y, "┖")
+        if start_y == 0:
+            pad.addstr(middle_c - 3, start_y, "┎")
+            pad.addstr(middle_c + 5, start_y, "┖")
 
-            for chord in bar.chords:
-                Draw.draw_chord(pad, chord)
+        for chord in bar.chords:
+            Draw.draw_chord(pad, chord, stave_height)
 
-            if bar_index == 0:
-                Draw.draw_beginning(pad, beats, key, middle_c)
+        if bar_index == 0:
+            Draw.draw_beginning(pad, beats, key, middle_c)
 
-            # If a bar is the last on its pad, or the last in score, remove any further characters
-            if (bar_index < len(score) - 1 and score[bar_index + 1].pad > score[bar_index].pad) or bar_index == len(score) - 1:
-                [height, width] = pad.getmaxyx()
-                for i in range(height):
-                    pad.move(i, end_y + 1)
-                    pad.clrtoeol()
+        # If a bar is the last on its pad, or the last in score, remove any further characters
+        if (bar_index < len(score) - 1 and score[bar_index + 1].pad > score[bar_index].pad) or bar_index == len(score) - 1:
+            [height, width] = pad.getmaxyx()
+            for i in range(height):
+                pad.move(i, end_y + 1)
+                pad.clrtoeol()
 
+    @staticmethod
     def draw_entire_score(score, pads, stave_height, beats, key):
         for i in range(len(score)):
             draw_bar(score, pads, i, stave_height, beats, key)

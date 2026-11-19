@@ -209,13 +209,13 @@ class Representation:
 
         match substring[0]:
             case "#":
-                return [Note.toggleSharp, substring[1::]]
+                return [Note.toggle_attribute("sharp"), substring[1::]]
 
             case "-":
-                return [Note.toggleFlat, substring[1::]]
+                return [Note.toggle_attribute("flat"), substring[1::]]
 
             case "n":
-                return [Note.toggleNatural, substring[1::]]
+                return [Note.toggle_attribute("natural"), substring[1::]]
 
             case _:
                 return [pass_func, substring]
