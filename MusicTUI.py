@@ -15,8 +15,6 @@ from Project import Project
 from Representation import Representation
 from Playback import Playback
 
-file : str = ""
-
 # MIDDLE_C determines the x-coordinates of many features (rests, notes, treble clef, etc.)
 # This allows easier adjustment of fixed coordinates if the maximum size of the stave is changes
 MIDDLE_C : int = 9
@@ -56,6 +54,7 @@ def main(stdscr : curses.window) -> None:
         sys.exit("Terminal size is too small")
 
     proj = Project()
+    file : str = ""
     current_chord = proj.score[0].chords[0]
     current_note = current_chord.notes[0]
 
@@ -85,11 +84,6 @@ def main(stdscr : curses.window) -> None:
             case "\x7f":
                 remove_note(proj.score, stave_pad)
 
-
-            case "\n":
-                # textbox.addstr(1, 0, Representation.score_to_string(score, beats))
-                pass
-
             case "KEY_UP" | "KEY_DOWN":
                 vertical_navigation(stave_pad, char)
                 change_made = False
@@ -110,11 +104,11 @@ def main(stdscr : curses.window) -> None:
             case "KEY_SF":
                 transpose("down", stave_pad, 7)
 
-            case "KEY_SRIGHT":
-                shift(stave_pad, "Right")
+            # case "KEY_SRIGHT":
+            #     shift(stave_pad, "Right")
 
-            case "KEY_SLEFT":
-                shift(stave_pad, "Left")
+            # case "KEY_SLEFT":
+            #     shift(stave_pad, "Left")
 
             case "#":
                 toggle_note_attribute(stave_pad, "sharp")
@@ -140,11 +134,11 @@ def main(stdscr : curses.window) -> None:
                 Draw.draw_bars_from(proj, pads, current_bar, stave_height)
 
             case "s":
-                save(stdscr, textbox)
+                file = save(file, stdscr, textbox)
                 change_made = False
 
             case "S":
-                save_as(stdscr, textbox)
+                file = save_as(file, stdscr, textbox)
                 change_made = False
 
             case "p":
@@ -157,21 +151,22 @@ def main(stdscr : curses.window) -> None:
                 change_made = False
 
             case "l" | "L":
-                load(proj, stdscr)
+                file = load(file, proj, stdscr)
 
             case "z":
-                prev_stack = undo(proj.score)
+                prev_stack = undo(proj)
                 change_made = False
                 Draw.draw_entire_score(proj, pads, stave_height)
 
             case "m":
                 lilypond_string = Representation.score_to_lilypond(proj)
-                export_to_lilypond(lilypond_string)
+                export_to_lilypond(file, lilypond_string)
                 change_made = False
 
             case "k":
                 [key, time] = create_menu(stdscr)
                 parse_menu_selections(proj, key, time)
+                
                 # navigate_to_note()
                 set_curses_modes(stdscr)
 
@@ -228,10 +223,8 @@ def string_mode(proj):
     global current_chord
     global current_note
 
-    score = proj.score
-
     writing_box = curses.newwin(2, stdscr_width - 3, stdscr_height - 5, 0)
-    writing_box.addstr(Representation.score_to_string(score, beats))
+    writing_box.addstr(Representation.score_to_string(proj))
 
     curses.curs_set(1)
 
@@ -248,13 +241,12 @@ def string_mode(proj):
         proj.score = Representation.string_to_score(text)
 
         current_bar = 0
-        current_chord = score[current_bar].chords[0]
+        current_chord = proj.score[current_bar].chords[0]
         current_note = current_chord.notes[0]
 
         for bar in proj.score:
             bar.redo_y()
         redo_all_pads(proj.score)
-        # navigate_to_note()
 
         Draw.draw_entire_score(proj, pads, stave_height)
 
@@ -317,14 +309,16 @@ def create_menu(stdscr):
 
     return [new_key, new_beats]
 
-def parse_menu_selections(proj, key, time):
+def parse_menu_selections(proj : Project, key : str, time : int):
     """Take menu selections and update proj as needed"""
 
     if time is not None:
-        proj.score = change_time_signature(proj.score, int(time[0]))
-        proj.beats = int(time[0])
 
+        proj.score = change_time_signature(proj.score, time)
+        
+        proj.beats = time
         redo_all_pads(proj.score)
+
         shift_visible(proj.score, 0)
 
         Draw.draw_entire_score(proj, pads, stave_height)
@@ -349,10 +343,6 @@ def resort_chord_list(chord_list : list[Chord], new_beats : int) -> list[Bar]:
 
         bar = new_score[bar_index]
         bar.chords.append(chord)
-
-        # To preserve the current chord, note which bar it is in
-        # if chord == current_chord:
-        #     current_bar = bar_index
 
         # If the bar length exceeds new_beats
         if bar.total_length() > new_beats:
@@ -383,7 +373,7 @@ def resort_chord_list(chord_list : list[Chord], new_beats : int) -> list[Bar]:
 def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
     """Given a score, format it into the new, given time signature"""
     global current_bar
-
+    
     # All chords appended to one list and resorted into bars
     chord_list = []
     for bar in score:
@@ -408,7 +398,7 @@ def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
 
     return new_score
 
-def export_to_lilypond(string : str) -> None:
+def export_to_lilypond(file : str, string : str) -> None:
     """Calling the makeLilypond shell script to compile a pdf of the current score"""
 
     if file == "":
@@ -421,7 +411,7 @@ def export_to_lilypond(string : str) -> None:
 
     subprocess.call(["sh", "./makeLilypond.sh", lilypond_file])
 
-def undo(score : list[Bar]):
+def undo(proj : Project):
     """Revert to the previous state, including current bar, chord and note"""
     global current_bar
     global current_chord
@@ -432,14 +422,14 @@ def undo(score : list[Bar]):
 
     [string, bar_index, chord_index, note_index] = prev_stack[-2]
 
-    score = Representation.string_to_score(string)
+    proj.score = Representation.string_to_score(string)
 
     current_bar = bar_index
-    current_chord = score[bar_index].chords[chord_index]
+    current_chord = proj.score[bar_index].chords[chord_index]
     current_note = current_chord.notes[note_index]
 
-    redo_all_pads(score)
-    shift_visible(score, score[current_bar].pad)
+    redo_all_pads(proj.score)
+    shift_visible(proj.score, proj.score[current_bar].pad)
 
     prev_stack.pop(-1)
 
@@ -583,14 +573,11 @@ def get_pad_min_max(score : list[Bar], pad_index : int) -> list[int, int]:
 
     return [top, bottom + 1]
 
-def load(proj : Project, stdscr : curses.window) -> None:
+def load(file : str, proj : Project, stdscr : curses.window) -> str:
     """Loading a new score"""
-    global file
     global current_bar
     global current_chord
     global current_note
-    global visible
-    global prev_stack
 
     stdscr.clear()
     for pad in pads:
@@ -615,7 +602,7 @@ def load(proj : Project, stdscr : curses.window) -> None:
         file = text #Will include .txt
 
         proj.score = Representation.string_to_score(string)
-        prev_stack = []
+        del prev_stack[:]
 
     except FileNotFoundError as e:
         with open("log.txt", "r", encoding="utf8") as file:
@@ -627,25 +614,26 @@ def load(proj : Project, stdscr : curses.window) -> None:
 
     redo_all_pads(proj.score)
     Draw.draw_entire_score(proj, pads, stave_height)
-    # navigate_to_note()
 
     shift_visible(proj.score, 0)
 
-    # refresh_visible_pads(stdscr)
+    return file
 
-def save(stdscr : curses.window, textbox : curses.window) -> None:
+def save(file : str, stdscr : curses.window, textbox : curses.window) -> str:
     """Save the current score to the current file name"""
     if file != "":
         with open(file, "w", encoding="utf-8") as myfile:
             myfile.write(textbox.instr(1, 0).decode("utf-8"))
 
         myfile.close()
+        return file
     else:
-        save_as(stdscr, textbox)
+        return save_as(file, stdscr, textbox)
 
-def save_as(stdscr : curses.window, textbox : curses.window) -> None:
+    
+
+def save_as(file : str, stdscr : curses.window, textbox : curses.window) -> str:
     """Save the score to a given file name"""
-    global file
 
     stdscr.clear()
 
@@ -662,7 +650,7 @@ def save_as(stdscr : curses.window, textbox : curses.window) -> None:
 
 
     if text != "":
-        with open(text + ".txt", "a", encoding="utf-8") as myfile:
+        with open(text + ".txt", "w", encoding="utf-8") as myfile:
             myfile.write(textbox.instr(1, 0).decode("utf-8"))
         myfile.close()
         file = text + ".txt"
@@ -671,6 +659,8 @@ def save_as(stdscr : curses.window, textbox : curses.window) -> None:
     textinput.erase()
 
     stdscr.refresh()
+
+    return file
 
 def shift(pad : curses.window, direction : str):
     """Swapping two chords in the direction given"""
@@ -710,7 +700,6 @@ def shift(pad : curses.window, direction : str):
 
 def redo_all_pads(score : list[Bar]):
     """Redo all y values of every bar, beat and chord to get true y values."""
-    global pads
 
     end_y = 15
     current_pad = 0
@@ -737,7 +726,7 @@ def redo_all_pads(score : list[Bar]):
         current_pad = bar.pad
         end_y = bar.endy
 
-    pads = pads[:current_pad + 1]
+    del pads[current_pad + 1:]
 
 def shift_elements_right(score : list[Bar], change : int):
     """Shift the y-coordinates of all notes in and after the current bar"""

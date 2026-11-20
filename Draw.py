@@ -21,7 +21,7 @@ class Draw:
              "SHIFT-Left/Right": "swap notes", "[": "decrease note length", 
              "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", 
              "-": "flat", "n": "natural", "p" : "play score", "m" : "export to PDF",
-             "k" : "change key signature", "t": "change time signature"}
+             "k" : "Project Settings"}
 
     @staticmethod
     def draw_treble(pad, x, y):
