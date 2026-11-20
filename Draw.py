@@ -39,9 +39,11 @@ class Draw:
         pad.addstr(x + 10, y - 1, "◯|")
 
     @staticmethod
-    def draw_beginning(pad, beats, key, MIDDLE_C):
+    def draw_beginning(proj, pad, MIDDLE_C):
         """Draw the beginning of the stave, including treble clef, time & key signatures"""
 
+        beats = proj.beats
+        key = proj.key
         length = 15
 
         pad.addstr(MIDDLE_C - 3, 0, "┎" + ("─" * length))
@@ -275,10 +277,12 @@ class Draw:
             pad.addstr(current_coord, chord.y, ">")
 
     @staticmethod
-    def draw_bars_from(score, pads, bar_index, stave_height, beats, key):
+    def draw_bars_from(proj, pads, bar_index, stave_height):
         """Alternative to draw_bar, draw all bars starting from score[bar_index]."""
+        score = proj.score
+
         for i in range(bar_index, len(score)):
-            Draw.draw_bar(score, pads, i, stave_height, beats, key)
+            Draw.draw_bar(proj, pads, i, stave_height)
 
         for bar in score:
             for chord in bar.chords:
@@ -286,8 +290,10 @@ class Draw:
                     Draw.draw_tie(pads[bar.pad], chord)
 
     @staticmethod
-    def draw_bar(score, pads, bar_index, stave_height, beats, key):
+    def draw_bar(proj, pads, bar_index, stave_height):
         """Draw bar score[bar_index] onto the stave."""
+
+        score = proj.score
 
         middle_c = Draw.MIDDLE_C
 
@@ -296,9 +302,6 @@ class Draw:
 
         start_y = bar.y
         end_y = bar.endy
-
-        open("log.txt", "a").write("\nDrawing bar at start_y: " + str(start_y))
-
 
         length = end_y - start_y - 1
 
@@ -320,7 +323,7 @@ class Draw:
             Draw.draw_chord(pad, chord, stave_height)
 
         if bar_index == 0:
-            Draw.draw_beginning(pad, beats, key, middle_c)
+            Draw.draw_beginning(proj, pad, middle_c)
 
         # If a bar is the last on its pad, or the last in score, remove any further characters
         if (bar_index < len(score) - 1 and score[bar_index + 1].pad > score[bar_index].pad) or bar_index == len(score) - 1:
@@ -330,11 +333,12 @@ class Draw:
                 pad.clrtoeol()
 
     @staticmethod
-    def draw_entire_score(score, pads, stave_height, beats, key):
+    def draw_entire_score(proj, pads, stave_height):
         """Redraw entire score"""
-        open("log.txt", "a").write("\nlen(score): " + str(len(score)))
+        score = proj.score
+
         for i in range(len(score)):
-            Draw.draw_bar(score, pads, i, stave_height, beats, key)
+            Draw.draw_bar(proj, pads, i, stave_height)
 
         for bar in score:
             for chord in bar.chords:

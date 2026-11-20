@@ -6,10 +6,12 @@ import math
 from curses import wrapper
 from curses.textpad import Textbox, rectangle
 from cursesmenu import CursesMenu
+from cursesmenu.items import ExitItem, SubmenuItem
 from Objects.Bar import Bar
 from Objects.Chord import Chord
 from Objects.Note import Note
 from Draw import Draw
+from Project import Project
 from Representation import Representation
 from Playback import Playback
 
@@ -28,13 +30,13 @@ beats : int = 4
 key : str = "C Major"
 
 # First bar starts at y = 13 and there are 4 beats in a bar
-score : list[Bar] = [Bar(15, beats), Bar(41, beats)]
+# score : list[Bar] = [Bar(15, beats), Bar(41, beats)]
 pads : list[curses.window] = []
 visible : list[int] = [] # Indexes of pads which are currently fully visible in pads
 
 current_bar : int = 0 # Index of current bar object in score[]
-current_chord : Chord = score[0].chords[0] # Chord object
-current_note : Note = current_chord.notes[0] # Note object
+current_chord : Chord = None # Chord object
+current_note : Note = None # Note object
 
 # prev_stack = for each change to the score, store the string representation
 # and the current bar, chord and note
@@ -49,9 +51,10 @@ stdscr_height : int = 0
 def main(stdscr : curses.window) -> None:
     global stdscr_width
     global stdscr_height
+    global current_chord
+    global current_note
     global prev_stack
     global key
-    global string_edit_mode
 
     stdscr_height, stdscr_width = stdscr.getmaxyx()
 
@@ -59,12 +62,17 @@ def main(stdscr : curses.window) -> None:
     if stdscr_height < 20 or stdscr_width < 113:
         sys.exit("Terminal size is too small")
 
-    set_up_tui(stdscr)
+    proj = Project()
+    current_chord = proj.score[0].chords[0]
+    current_note = current_chord.notes[0]
 
-    textbox : curses.window = set_up_textbox()
+    set_up_tui(proj, stdscr)
+
+    textbox : curses.window = set_up_textbox(proj)
     hints : curses.window = set_up_hints()
-    stave_pad : curses.window = get_current_pad()
+    stave_pad : curses.window = get_current_pad(proj)
     visible.append(0)
+    navigate_to_note(pads[proj.get_pad_index(current_bar)])
 
     textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
     hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
@@ -84,6 +92,7 @@ def main(stdscr : curses.window) -> None:
             case "\x7f":
                 remove_note(stave_pad)
 
+
             case "\n":
                 # textbox.addstr(1, 0, Representation.score_to_string(score, beats))
                 pass
@@ -93,7 +102,7 @@ def main(stdscr : curses.window) -> None:
                 change_made = False
 
             case "KEY_RIGHT" | "KEY_LEFT":
-                horizontal_navigation(char)
+                horizontal_navigation(proj, char)
                 change_made = False
 
             case "kDN5" | ",":
@@ -130,10 +139,12 @@ def main(stdscr : curses.window) -> None:
                 toggle_note_attribute(stave_pad, "accent")
 
             case "[":
-                dec_length()
+                dec_length(proj.score)
+                Draw.draw_bars_from(proj, pads, current_bar, stave_height)
 
             case "]":
-                inc_length()
+                inc_length(proj.score)
+                Draw.draw_bars_from(proj, pads, current_bar, stave_height)
 
             case "s":
                 save(stdscr, textbox)
@@ -153,29 +164,25 @@ def main(stdscr : curses.window) -> None:
                 change_made = False
 
             case "l" | "L":
-                load(stdscr)
+                load(proj, stdscr)
 
             case "z":
-                prev_stack = undo()
+                prev_stack = undo(proj.score)
                 change_made = False
+                Draw.draw_entire_score(proj, pads, stave_height)
 
             case "m":
                 export_to_lilypond()
                 change_made = False
 
-            case "t":
-                time_sig = create_menu(stdscr, "time")
-                change_time_signature(int(time_sig[0]))
-                set_curses_modes(stdscr)
-
             case "k":
-                key = create_menu(stdscr, "key")
-                Draw.draw_entire_score(score, pads, stave_height, beats, key)
-                navigate_to_note()
+                [key, time] = create_menu(stdscr)
+                parse_menu_selections(proj, key, time)
+                # navigate_to_note()
                 set_curses_modes(stdscr)
 
             case "h":
-                string_mode()
+                string_mode(proj)
 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -183,18 +190,20 @@ def main(stdscr : curses.window) -> None:
                 # Provided the terminal size is large enough:
                 if stdscr_width >= 113 and stdscr_height >= 20:
                     Draw.draw_hints(hints, stdscr_width)
-                    redo_all_pads()
-                    Draw.draw_entire_score(score, pads, stave_height, beats, key)
-                    navigate_to_note()
+                    redo_all_pads(proj.score)
+                    Draw.draw_entire_score(proj, pads, stave_height)
+                    # navigate_to_note()
 
                 change_made = False
 
             case _:
                 if char in ALL_NOTES:
-                    parse_note(stave_pad, char)
+                    parse_note(proj.get_bar(current_bar), stave_pad, char)
 
                 else:
                     stave_pad.addstr(0, 0, char)
+
+        navigate_to_note(pads[proj.get_pad_index(current_bar)])
 
         # If the terminal is too small, create an error message pad
         if stdscr_height < 20 or stdscr_width < 112:
@@ -205,26 +214,27 @@ def main(stdscr : curses.window) -> None:
 
         # if a change was made to the score, the prev_stack should be updated
         if change_made:
-            prev_stack = change_to_score(Representation.score_to_string(score, beats))
+            current_chords = proj.get_bar(current_bar).chords
+            prev_stack = change_to_score(current_chords, Representation.score_to_string(proj))
 
         textbox.clear()
-        textbox.addstr(1, 0, Representation.score_to_string(score, beats))
+        textbox.addstr(1, 0, Representation.score_to_string(proj))
         textbox.refresh(0, 0, stdscr_height - 6, 0, stdscr_height - 4, stdscr_width - 2)
 
         hints.refresh(0, 0, stdscr_height - 3, 0, stdscr_height - 1, stdscr_width - 2)
 
-        refresh_visible_pads(stdscr)
-        stave_pad = get_current_pad()
+        refresh_visible_pads(proj.score, stdscr)
+        stave_pad = get_current_pad(proj)
 
         open("keylog.txt", "a", encoding="utf-8").write("\n" + char)
 
-def string_mode():
+def string_mode(proj):
     """Switching to string mode"""
-    global score
     global current_bar
     global current_chord
     global current_note
-    
+
+    score = proj.score
 
     writing_box = curses.newwin(2, stdscr_width - 3, stdscr_height - 5, 0)
     writing_box.addstr(Representation.score_to_string(score, beats))
@@ -241,18 +251,18 @@ def string_mode():
     text = tb.gather().strip().replace("\n", "")
 
     try:
-        score = Representation.string_to_score(text)
+        proj.score = Representation.string_to_score(text)
 
         current_bar = 0
         current_chord = score[current_bar].chords[0]
         current_note = current_chord.notes[0]
 
-        for bar in score:
+        for bar in proj.score:
             bar.redo_y()
-        redo_all_pads()
-        navigate_to_note()
+        redo_all_pads(proj.score)
+        # navigate_to_note()
 
-        Draw.draw_entire_score(score, pads, stave_height, beats, key)
+        Draw.draw_entire_score(proj, pads, stave_height)
 
     except Exception:
         open("log.txt", "a", encoding="utf-8").write("\nstring_to_score error")
@@ -263,7 +273,7 @@ def changed_key_inputs(x):
     """Alternative integer returns for keystrokes"""
     if x == 10:
         return 7
-    elif x == 127:
+    if x == 127:
         return 263
     return x
 
@@ -281,44 +291,59 @@ def set_curses_modes(stdscr):
 
     stdscr.keypad(True)
 
-def create_menu(stdscr, opt):
+def create_menu(stdscr):
     """Creating and displaying time or key signature menus. Returns the user's choice"""
 
     key_list=["C Major", "G Major", "D Major", "A Major", "E Major", "B Major", "F# Major",
                "Db Major", "Ab Major", "Eb Major", "Bb Major", "F Major"]
     time_signature_list = ["2 / 4", "3 / 4", "4 / 4"]
 
-    if opt == "key":
-        chosen_list = key_list
-    else:
-        chosen_list = time_signature_list
+    menu = CursesMenu("Project Settings")
 
-    menu = CursesMenu.make_selection_menu(chosen_list,"Select an option")
+    time_submenu = CursesMenu.make_selection_menu(time_signature_list, "Select a time signature")
+    key_submenu = CursesMenu.make_selection_menu(key_list, "Select a key signature")
+    time_submenu_item = SubmenuItem("Time Signature", time_submenu, menu=menu)
+    key_submenu_item = SubmenuItem("Key Signature", key_submenu, menu=menu)
+    quit_item = ExitItem(menu=menu)
+    time_submenu.items.append(quit_item)
+    key_submenu.items.append(quit_item)
+
+    menu.items.append(time_submenu_item)
+    menu.items.append(key_submenu_item)
 
     menu.show()
     menu.join()
-    selection = menu.selected_option
+    time_selection = time_submenu.selected_option
+    key_selection = key_submenu.selected_option
+
+    new_key = None if key_selection == -1 else key_list[key_selection]
+    new_beats = None if time_selection == -1 else int(time_signature_list[time_selection][0])
 
     set_curses_modes(stdscr)
 
-    return chosen_list[selection]
+    return [new_key, new_beats]
 
-# Making a long list of chords
-# TODO: account for change in beats when undoing
-def change_time_signature(new_beats):
-    """Change the time signature of the piece"""
-    global score
-    global beats
-    global current_bar
+def parse_menu_selections(proj, key, time):
+    """Take menu selections and update proj as needed"""
+    if time is not None:
+        proj.score = change_time_signature(proj.score, int(time[0]))
+        proj.beats = int(time[0])
 
-    # All chords appended to one list and resorted into bars
-    chord_list = []
-    for bar in score:
-        for chord in bar.chords:
-            chord_list.append(chord)
+        redo_all_pads(proj.score)
+        shift_visible(proj.score, 0)
 
-    new_score = [Bar(0, new_beats)]
-    new_score[0].empty_bar()
+        Draw.draw_entire_score(proj, pads, stave_height)
+        # navigate_to_note()
+
+
+    if key is not None:
+        proj.key = key
+        Draw.draw_beginning(pads[0], proj, MIDDLE_C)
+
+def resort_chord_list(chord_list : list[Chord], new_beats : int) -> list[Bar]:
+    """Given a list of chords and beats per bar, resort the chords into bars.
+    Return the new score"""
+    new_score = []
     bar_index = 0
 
     while len(chord_list) > 0:
@@ -333,8 +358,8 @@ def change_time_signature(new_beats):
         bar.chords.append(chord)
 
         # To preserve the current chord, note which bar it is in
-        if chord == current_chord:
-            current_bar = bar_index
+        # if chord == current_chord:
+        #     current_bar = bar_index
 
         # If the bar length exceeds new_beats
         if bar.total_length() > new_beats:
@@ -357,6 +382,24 @@ def change_time_signature(new_beats):
 
         chord_list.pop(0)
 
+    return new_score
+
+
+# Making a long list of chords
+# TODO: account for change in beats when undoing
+def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
+    """Given a score, format it into the new, given time signature"""
+    global current_bar
+
+    # All chords appended to one list and resorted into bars
+    chord_list = []
+    for bar in score:
+        for chord in bar.chords:
+            chord_list.append(chord)
+
+    new_score = resort_chord_list(chord_list, new_beats)
+    bar = new_score[-1]
+
     # If the last bar needs to be lengthened with rests
     if bar.total_length() < new_beats:
         new_chord = Chord(-1, new_beats - bar.total_length(), 0)
@@ -366,14 +409,11 @@ def change_time_signature(new_beats):
     for bar in new_score:
         bar.redo_y()
 
-    beats = new_beats
-    score = new_score
+        # Preserving the current_chord
+        if current_chord in bar.chords:
+            current_bar = new_score.index(bar)
 
-    redo_all_pads()
-    shift_visible(0)
-
-    Draw.draw_entire_score(score, pads, stave_height, beats, key)
-    navigate_to_note()
+    return new_score
 
 def export_to_lilypond() -> None:
     """Calling the makeLilypond shell script to compile a pdf of the current score"""
@@ -389,12 +429,11 @@ def export_to_lilypond() -> None:
 
     subprocess.call(["sh", "./makeLilypond.sh", lilypond_file])
 
-def undo():
+def undo(score : list[Bar]):
     """Revert to the previous state, including current bar, chord and note"""
     global current_bar
     global current_chord
     global current_note
-    global score
 
     if len(prev_stack) == 1:
         return prev_stack
@@ -407,22 +446,20 @@ def undo():
     current_chord = score[bar_index].chords[chord_index]
     current_note = current_chord.notes[note_index]
 
-    redo_all_pads()
-    shift_visible(score[current_bar].pad)
+    redo_all_pads(score)
+    shift_visible(score, score[current_bar].pad)
 
-    Draw.draw_entire_score(score, pads, stave_height, beats, key)
-    navigate_to_note()
     prev_stack.pop(-1)
 
     return prev_stack
 
-def change_to_score(new_string : str) -> None:
+def change_to_score(current_chords : list[Chord], new_string : str) -> None:
     """Update the string textbox and the stack of previous strings"""
     global prev_stack
 
     # update prev_stack, keep the latest 10 changes
-    current_chord_index : int = score[current_bar].chords.index(current_chord)
-    chord : Chord = score[current_bar].chords[current_chord_index]
+    current_chord_index : int = current_chords.index(current_chord)
+    chord : Chord = current_chords[current_chord_index]
     current_note_index : int = chord.notes.index(current_note)
 
     prev_stack.append([new_string, current_bar, current_chord_index, current_note_index])
@@ -442,7 +479,7 @@ def play_audio() -> curses.window:
 
     return play_pad
 
-def set_up_tui(stdscr: curses.window) -> None:
+def set_up_tui(proj : Project, stdscr: curses.window) -> None:
     """Set up curses, stdscr, and the stave pads"""
 
     set_curses_modes(stdscr)
@@ -455,13 +492,13 @@ def set_up_tui(stdscr: curses.window) -> None:
     stdscr.refresh()
     pads.append(stave_pad)
 
-    Draw.draw_entire_score(score, pads, stave_height, beats, key)
-    navigate_to_note()
+    Draw.draw_entire_score(proj, pads, stave_height)
+    # navigate_to_note()
 
-def set_up_textbox() -> curses.window:
+def set_up_textbox(proj) -> curses.window:
     """Set up the textbox for the string representation of the score"""
     textbox : curses.window = curses.newpad(3, stdscr_width)
-    textbox.addstr(1, 0, Representation.score_to_string(score, beats))
+    textbox.addstr(1, 0, Representation.score_to_string(proj))
 
     return textbox
 
@@ -472,7 +509,7 @@ def set_up_hints() -> curses.window:
 
     return hints
 
-def shift_visible(current_pad_index : int) -> list[int]:
+def shift_visible(score, current_pad_index : int) -> list[int]:
     """Shifting the visible pads so the current pad is visible"""
 
     # If the current pad is already visible
@@ -494,17 +531,17 @@ def shift_visible(current_pad_index : int) -> list[int]:
         visible.append(to_compare + direction)
         visible.sort()
 
-        total_length = sum([get_pad_height(i) for i in range(len(visible))])
+        total_length = sum([get_pad_height(score, i) for i in range(len(visible))])
         while total_length > stdscr_height - 6:
             visible.pop(to_remove)
-            total_length = sum([get_pad_height(i) for i in range(len(visible))])
+            total_length = sum([get_pad_height(score, i) for i in range(len(visible))])
 
-def get_pad_height(pad_index):
+def get_pad_height(score, pad_index):
     """Calculate and return the height of the pad"""
-    [top, bottom] = get_pad_min_max(pad_index)
+    [top, bottom] = get_pad_min_max(score, pad_index)
     return bottom - top
 
-def refresh_visible_pads(stdscr : curses.window) -> None:
+def refresh_visible_pads(score : list[Bar], stdscr : curses.window) -> None:
     """Refreshing pads based on visible pads"""
 
     x : int = 0
@@ -512,7 +549,7 @@ def refresh_visible_pads(stdscr : curses.window) -> None:
     # Refresh all visible staves
     for index in visible:
         pad : curses.window = pads[index]
-        [top, bottom] = get_pad_min_max(index)
+        [top, bottom] = get_pad_min_max(score, index)
 
         pad.refresh(top, 0, x, 0, min(x + (bottom - top) + 1, stdscr_height - 6), stdscr_width - 2)
         x += (bottom - top)
@@ -520,7 +557,7 @@ def refresh_visible_pads(stdscr : curses.window) -> None:
     # If there is space for a partly visible stave
     if x < stdscr_height - 6 and visible[-1] <= len(pads) - 2:
         pad : curses.window = pads[visible[-1] + 1]
-        [top, bottom] = get_pad_min_max(visible[-1] + 1)
+        [top, bottom] = get_pad_min_max(score, visible[-1] + 1)
 
         pad.refresh(top, 0, x, 0, min(x + (bottom - top) + 1, stdscr_height - 7), stdscr_width - 2)
 
@@ -529,7 +566,7 @@ def refresh_visible_pads(stdscr : curses.window) -> None:
             stdscr.move(i, 0)
             stdscr.clrtoeol()
 
-def get_pad_min_max(pad_index):
+def get_pad_min_max(score : list[Bar], pad_index : int) -> list[int, int]:
     """Calculating the minimum and maximum note coordinates in a pad"""
     top = MIDDLE_C - 6
     bottom = MIDDLE_C + 7
@@ -554,10 +591,9 @@ def get_pad_min_max(pad_index):
 
     return [top, bottom + 1]
 
-def load(stdscr : curses.window) -> None:
+def load(proj : Project, stdscr : curses.window) -> None:
     """Loading a new score"""
     global file
-    global score
     global current_bar
     global current_chord
     global current_note
@@ -586,7 +622,7 @@ def load(stdscr : curses.window) -> None:
 
         file = text #Will include .txt
 
-        score = Representation.string_to_score(string)
+        proj.score = Representation.string_to_score(string)
         prev_stack = []
 
     except FileNotFoundError as e:
@@ -594,16 +630,16 @@ def load(stdscr : curses.window) -> None:
             file.write("\n" + str(e))
 
     current_bar = 0
-    current_chord = score[current_bar].chords[0]
+    current_chord = proj.score[current_bar].chords[0]
     current_note = current_chord.notes[0]
 
-    redo_all_pads()
-    Draw.draw_entire_score(score, pads, stave_height, beats, key)
-    navigate_to_note()
+    redo_all_pads(proj.score)
+    Draw.draw_entire_score(proj, pads, stave_height)
+    # navigate_to_note()
 
-    shift_visible(0)
+    shift_visible(proj.score, 0)
 
-    refresh_visible_pads(stdscr)
+    # refresh_visible_pads(stdscr)
 
 def save(stdscr : curses.window, textbox : curses.window) -> None:
     """Save the current score to the current file name"""
@@ -678,11 +714,10 @@ def shift(pad : curses.window, direction : str):
 
         Draw.draw_chord(pad, to_switch, stave_height)
         Draw.draw_chord(pad, current_chord, stave_height)
-        navigate_to_note()
+        # navigate_to_note()
 
-# TODO: only redo ys from the changed bar
-def redo_all_pads():
-    """Redo all y values of every bar, beat and chord to get true y values"""
+def redo_all_pads(score : list[Bar]):
+    """Redo all y values of every bar, beat and chord to get true y values."""
     global pads
 
     end_y = 15
@@ -725,12 +760,7 @@ def shift_elements_right(change):
 
     score[current_bar].endy += change
 
-    redo_all_pads()
-
-    for i in range(current_bar, len(score)):
-        Draw.draw_bar(score, pads, i, stave_height, beats, key)
-
-def dec_length():
+def dec_length(score : list[Bar]):
     """Decrease the length of the current chords"""
     global current_chord
     global current_note
@@ -761,13 +791,12 @@ def dec_length():
         shift_elements_right(5 - (score[current_bar].endy - current_chord.y))
 
     # If its not the last bar and the next bar doesn't start where it should
-    if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
-        redo_all_pads()
+    # if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
+    redo_all_pads(score)
 
-    Draw.draw_entire_score(score, pads, stave_height, beats, key)
-    navigate_to_note()
+    # navigate_to_note()
 
-def inc_length():
+def inc_length(score : list[Bar]):
     """Increase the length of the current chord"""
 
     # If it will form a tie, the length shouldn't change
@@ -784,7 +813,7 @@ def inc_length():
     if current_chord.length in (2, 3, 4):
         if index != len(score[current_bar].chords) - 1:
             current_chord.length += 1
-        override_chords(current_bar, current_chord, 1)
+        override_chords(score, current_bar, current_chord, 1)
 
     else:
         length = current_chord.length
@@ -792,19 +821,18 @@ def inc_length():
         if index != len(score[current_bar].chords) - 1:
             current_chord.length *= 2
 
-        override_chords(current_bar, current_chord, length)
+        override_chords(score, current_bar, current_chord, length)
 
-    redo_all_pads()
-    Draw.draw_bars_from(score, pads, current_bar, stave_height, beats, key)
-    navigate_to_note()
+    redo_all_pads(score)
+    # navigate_to_note()
 
 # Note: the space to override will always be <= 1
-def override_chords(bar_index : int, chord, space : float):
+def override_chords(score : list[Bar], bar_index : int, chord, space : float):
     """Given a chord and the space (length) to override, remove 
     the appropriate number of following chords."""
 
     while space > 0:
-        [next_bar, next_chord] = move_right(bar_index, chord)
+        [next_bar, next_chord] = move_right(score, bar_index, chord)
         index = score[bar_index].chords.index(chord)
 
         # If there is no next chord to override, create a new_bar
@@ -818,7 +846,7 @@ def override_chords(bar_index : int, chord, space : float):
 
             new_bar.chords.insert(0, new_chord)
 
-            override_chords(len(score) - 1, new_chord, new_chord.length)
+            override_chords(score, len(score) - 1, new_chord, new_chord.length)
 
             chord.tie = True
             space = 0
@@ -879,9 +907,9 @@ def split_chord(chord : Chord) -> list[Chord]:
 
     return chords
 
-def get_current_pad():
+def get_current_pad(proj):
     """Return the pad of the current bar"""
-    return pads[score[current_bar].pad]
+    return pads[proj.get_pad_index(current_bar)]
 
 def toggle_note_attribute(pad : curses.window, attr : str):
     """Toggle the note attributes"""
@@ -894,12 +922,11 @@ def toggle_note_attribute(pad : curses.window, attr : str):
             current_chord.toggle_staccato()
 
     Draw.draw_chord(pad, current_chord, stave_height)
-    navigate_to_note()
+    # navigate_to_note()
 
-def navigate_away_from():
+def navigate_away_from(pad):
     """Remove highlight from current note"""
 
-    pad = get_current_pad()
     [x, y] = get_current_coords()
 
     if x == -1 or x is None:
@@ -912,10 +939,9 @@ def navigate_away_from():
         else:
             pad.chgat(x, y, 2, curses.color_pair(2))
 
-def navigate_to_note():
+def navigate_to_note(pad):
     """Highlight the current note"""
 
-    pad = get_current_pad()
     [x, y] = get_current_coords()
 
     if x is not None:
@@ -931,19 +957,20 @@ def navigate_to_note():
             else:
                 pad.chgat(MIDDLE_C, y, 2, curses.color_pair(1))
 
-def horizontal_navigation(direction):
+def horizontal_navigation(proj, direction):
     """Navigate horizontally: between chords"""
     global current_bar
     global current_chord
     global current_note
 
-    navigate_away_from()
+    score = proj.score
+    navigate_away_from(pads[proj.get_pad_index(current_bar)])
 
     if direction == "KEY_RIGHT":
-        [next_bar, next_chord] = move_right(current_bar, current_chord)
+        [next_bar, next_chord] = move_right(score, current_bar, current_chord)
 
     else:
-        [next_bar, next_chord] = move_left(current_bar, current_chord)
+        [next_bar, next_chord] = move_left(score, current_bar, current_chord)
 
     if next_chord:
         current_bar = next_bar
@@ -954,8 +981,7 @@ def horizontal_navigation(direction):
     elif direction == "KEY_RIGHT":
 
         pad_index = score[current_bar].pad
-
-        score.append(Bar(score[-1].endy, beats))
+        proj.create_new_bar()
         current_bar = len(score) - 1
         current_chord = score[-1].chords[0]
         current_note = current_chord.notes[0]
@@ -964,20 +990,19 @@ def horizontal_navigation(direction):
 
         # If the current bar overflows off the screen
         if score[current_bar].endy >= stdscr_width - 3:
-            redo_all_pads()
-            Draw.draw_entire_score(score, pads, stave_height, beats, key)
-            navigate_to_note()
+            redo_all_pads(proj.score)
+            Draw.draw_entire_score(proj, pads, stave_height)
 
         else:
-            Draw.draw_bar(score, pads, -1, stave_height, beats, key)
+            Draw.draw_bar(proj, pads, -1, stave_height)
 
-        change_to_score(Representation.score_to_string(score, beats))
+        current_chords = proj.score[current_bar].chords
+        change_to_score(current_chords, Representation.score_to_string(proj))
 
 
-    shift_visible(score[current_bar].pad)
-    navigate_to_note()
+    shift_visible(score, score[current_bar].pad)
 
-def move_left(bar_index : int, chord : Chord) -> list[int, Chord]:
+def move_left(score : list[Bar], bar_index : int, chord : Chord) -> list[int, Chord]:
     """Given a bar and chord, return the previous chord, regardless of which bar it's in"""
     # Check the current Bar
     prev_chord = score[bar_index].get_prev_chord(chord)
@@ -993,7 +1018,7 @@ def move_left(bar_index : int, chord : Chord) -> list[int, Chord]:
     # If not, return None
     return [None, None]
 
-def move_right(bar_index : int, chord : Chord) -> list[int, Chord]:
+def move_right(score : list[Bar], bar_index : int, chord : Chord) -> list[int, Chord]:
     """Given a bar and chord, return the next chord along, regardless of which bar it's in"""
 
     # Check the current Bar
@@ -1023,7 +1048,7 @@ def vertical_navigation(pad, direction):
             current_note = current_chord.get_other_note(current_note, add)
 
     Draw.draw_chord(pad, current_chord, stave_height)
-    navigate_to_note()
+    # navigate_to_note()
 
 # TODO: deal with a note already being in that position
 def transpose(direction, stave_pad, change):
@@ -1046,7 +1071,7 @@ def transpose(direction, stave_pad, change):
         current_note = current_chord.add_note(new_pitch)
 
         Draw.draw_chord(stave_pad, current_chord, stave_height)
-        navigate_to_note()
+        # navigate_to_note()
 
 def get_current_coords():
     """Get the coordinates of the currently selected note"""
@@ -1055,7 +1080,7 @@ def get_current_coords():
     x = current_note.pitch
     return [x, y]
 
-def remove_note(pad):
+def remove_note(score : list[Bar], pad : curses.window):
     """Remove the current note from the current chord"""
     global current_note
 
@@ -1065,13 +1090,11 @@ def remove_note(pad):
         Draw.draw_chord(pad, current_chord, stave_height)
 
         if current_chord.rest:
-            [prev_bar, prev_chord] = move_left(current_bar, current_chord)
+            [prev_bar, prev_chord] = move_left(score, current_bar, current_chord)
             if prev_chord:
                 prev_chord.tie = False
 
-        navigate_to_note()
-
-def parse_note(stave_pad, note):
+def parse_note(bar : Bar, stave_pad : curses.window, note : Note):
     """Add the given note to the current chord"""
     global current_chord
     global current_note
@@ -1080,7 +1103,7 @@ def parse_note(stave_pad, note):
     lowercase_note = note.lower()
     x = NOTE_DICT[lowercase_note]
 
-    navigate_away_from()
+    navigate_away_from(stave_pad)
 
     if not current_chord.rest:
 
@@ -1095,13 +1118,12 @@ def parse_note(stave_pad, note):
         # Current chord is a rest
         new_chord = Chord(x, current_chord.length, current_chord.y)
 
-        index = score[current_bar].chords.index(current_chord)
-        score[current_bar].chords[index] = new_chord
+        index = bar.chords.index(current_chord)
+        bar.chords[index] = new_chord
 
         current_chord = new_chord
         current_note = current_chord.notes[0]
 
     Draw.draw_chord(stave_pad, current_chord, stave_height)
-    navigate_to_note()
 
 wrapper(main)

@@ -3,6 +3,7 @@ import re
 from Objects.Bar import Bar
 from Objects.Chord import Chord
 from Objects.Note import Note
+from Project import Project
 
 class Representation:
     """Class for converting score to strings and vice versa"""
@@ -16,8 +17,11 @@ class Representation:
     current_length = 0
 
     @staticmethod
-    def score_to_string(score : list[Bar], beats):
+    def score_to_string(proj : Project):
         """Parsing the score list to a string"""
+
+        score = proj.score
+        beats = proj.beats
         string = "B:" + str(beats) + "."
         current_len = 0
 
