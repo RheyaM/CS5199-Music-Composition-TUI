@@ -9,4 +9,21 @@ class Note:
             self.attribute = None
         else:
             self.attribute = newattr
-            
+
+    def sharp(self):
+        """Return True if the note is sharp"""
+        if self.attribute == "sharp":
+            return True
+        return False
+
+    def flat(self):
+        """Return True if the note is flat"""
+        if self.attribute == "sharp":
+            return True
+        return False
+
+    def natural(self):
+        """Return True if the note is natural"""
+        if self.attribute == "sharp":
+            return True
+        return False

@@ -259,8 +259,12 @@ class Representation:
         return [chord, substring]
 
     @staticmethod
-    def score_to_lilypond(score : list[Bar], beats : int, key : str):
+    def score_to_lilypond(proj : Project):
         """Convert a score to lilypond notation"""
+        score = proj.score
+        beats = proj.beats
+        key = proj.key
+
         string = "\\version \"2.26.0\"{ \\fixed c' { \\numericTimeSignature "
 
         string += f"\\time {beats}/4 "
@@ -276,9 +280,9 @@ class Representation:
                 for note in chord.notes:
                     notestr = Representation.pitch_to_note(note.pitch)
 
-                    if note.sharp:
+                    if note.sharp():
                         notestr = notestr[0] + "is" + notestr[1::]
-                    elif note.flat:
+                    elif note.flat():
                         notestr = notestr[0] + "es" + notestr[1::]
 
                     chordstr += " " + notestr

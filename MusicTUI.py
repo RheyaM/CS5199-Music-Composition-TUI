@@ -25,12 +25,6 @@ NOTE_DICT : dict = {"c": MIDDLE_C + 7, "d": MIDDLE_C + 6, "e": MIDDLE_C + 5, "f"
                     "g": MIDDLE_C + 3, "a": MIDDLE_C + 2, "b": MIDDLE_C + 1}
 ALL_NOTES : list[str] = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
 
-beats : int = 4
-
-key : str = "C Major"
-
-# First bar starts at y = 13 and there are 4 beats in a bar
-# score : list[Bar] = [Bar(15, beats), Bar(41, beats)]
 pads : list[curses.window] = []
 visible : list[int] = [] # Indexes of pads which are currently fully visible in pads
 
@@ -54,7 +48,6 @@ def main(stdscr : curses.window) -> None:
     global current_chord
     global current_note
     global prev_stack
-    global key
 
     stdscr_height, stdscr_width = stdscr.getmaxyx()
 
@@ -90,7 +83,7 @@ def main(stdscr : curses.window) -> None:
                 break
 
             case "\x7f":
-                remove_note(stave_pad)
+                remove_note(proj.score, stave_pad)
 
 
             case "\n":
@@ -172,7 +165,8 @@ def main(stdscr : curses.window) -> None:
                 Draw.draw_entire_score(proj, pads, stave_height)
 
             case "m":
-                export_to_lilypond()
+                lilypond_string = Representation.score_to_lilypond(proj)
+                export_to_lilypond(lilypond_string)
                 change_made = False
 
             case "k":
@@ -325,6 +319,7 @@ def create_menu(stdscr):
 
 def parse_menu_selections(proj, key, time):
     """Take menu selections and update proj as needed"""
+
     if time is not None:
         proj.score = change_time_signature(proj.score, int(time[0]))
         proj.beats = int(time[0])
@@ -333,12 +328,10 @@ def parse_menu_selections(proj, key, time):
         shift_visible(proj.score, 0)
 
         Draw.draw_entire_score(proj, pads, stave_height)
-        # navigate_to_note()
-
 
     if key is not None:
         proj.key = key
-        Draw.draw_beginning(pads[0], proj, MIDDLE_C)
+        Draw.draw_beginning(proj, pads[0], MIDDLE_C)
 
 def resort_chord_list(chord_list : list[Chord], new_beats : int) -> list[Bar]:
     """Given a list of chords and beats per bar, resort the chords into bars.
@@ -415,10 +408,9 @@ def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
 
     return new_score
 
-def export_to_lilypond() -> None:
+def export_to_lilypond(string : str) -> None:
     """Calling the makeLilypond shell script to compile a pdf of the current score"""
 
-    string = Representation.score_to_lilypond(score, beats, key)
     if file == "":
         lilypond_file = "Untitled.ly"
     else:
@@ -747,7 +739,7 @@ def redo_all_pads(score : list[Bar]):
 
     pads = pads[:current_pad + 1]
 
-def shift_elements_right(change):
+def shift_elements_right(score : list[Bar], change : int):
     """Shift the y-coordinates of all notes in and after the current bar"""
     global current_chord
     global current_bar
@@ -784,11 +776,11 @@ def dec_length(score : list[Bar]):
 
     # If the next chord is not far enough from the newly created current chord, shift it along
     if next_chord and (next_chord.y < current_chord.y + 4):
-        shift_elements_right(5 - (next_chord.y - current_chord.y))
+        shift_elements_right(score, 5 - (next_chord.y - current_chord.y))
 
     # If its the last chord and overtook the end of the bar
     if current_chord.y + 5 > score[current_bar].endy:
-        shift_elements_right(5 - (score[current_bar].endy - current_chord.y))
+        shift_elements_right(score, 5 - (score[current_bar].endy - current_chord.y))
 
     # If its not the last bar and the next bar doesn't start where it should
     # if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
