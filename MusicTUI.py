@@ -130,7 +130,7 @@ def main(stdscr : curses.window) -> None:
                 Draw.draw_bars_from(proj, pads, current_bar, stave_height)
 
             case "]":
-                inc_length(proj.score)
+                inc_length(proj)
                 Draw.draw_bars_from(proj, pads, current_bar, stave_height)
 
             case "s":
@@ -142,12 +142,11 @@ def main(stdscr : curses.window) -> None:
                 change_made = False
 
             case "p":
-                play_pad = play_audio()
+                play_audio(proj, file)
                 change_made = False
 
             case "v":
                 Playback.stop_audio()
-                play_pad = None
                 change_made = False
 
             case "l" | "L":
@@ -166,8 +165,6 @@ def main(stdscr : curses.window) -> None:
             case "k":
                 [key, time] = create_menu(stdscr)
                 parse_menu_selections(proj, key, time)
-                
-                # navigate_to_note()
                 set_curses_modes(stdscr)
 
             case "h":
@@ -181,7 +178,6 @@ def main(stdscr : curses.window) -> None:
                     Draw.draw_hints(hints, stdscr_width)
                     redo_all_pads(proj.score)
                     Draw.draw_entire_score(proj, pads, stave_height)
-                    # navigate_to_note()
 
                 change_made = False
 
@@ -450,14 +446,14 @@ def change_to_score(current_chords : list[Chord], new_string : str) -> None:
     return prev_stack
 
 # TODO: cut the chords of the current bar to only play from current_chord
-def play_audio() -> curses.window:
+def play_audio(proj, file) -> curses.window:
     """Extract the sublist of score to play, then pass to Playback class"""
 
     play_pad : curses.window = curses.newpad(4, 20)
     play_pad.addstr(1, 1, "Playing... 'v' to Pause")
 
-    subscore : list[Bar] = score[current_bar::]
-    Playback.create_audio(subscore, file, key)
+    subscore : list[Bar] = proj.score[current_bar::]
+    Playback.create_audio(subscore, file, proj.key)
 
     return play_pad
 
@@ -777,8 +773,9 @@ def dec_length(score : list[Bar]):
 
     # navigate_to_note()
 
-def inc_length(score : list[Bar]):
+def inc_length(proj : Project):
     """Increase the length of the current chord"""
+    score = proj.score
 
     # If it will form a tie, the length shouldn't change
     index = score[current_bar].chords.index(current_chord)
@@ -794,7 +791,7 @@ def inc_length(score : list[Bar]):
     if current_chord.length in (2, 3, 4):
         if index != len(score[current_bar].chords) - 1:
             current_chord.length += 1
-        override_chords(score, current_bar, current_chord, 1)
+        override_chords(proj, current_bar, current_chord, 1)
 
     else:
         length = current_chord.length
@@ -802,15 +799,17 @@ def inc_length(score : list[Bar]):
         if index != len(score[current_bar].chords) - 1:
             current_chord.length *= 2
 
-        override_chords(score, current_bar, current_chord, length)
+        override_chords(proj, current_bar, current_chord, length)
 
     redo_all_pads(score)
     # navigate_to_note()
 
 # Note: the space to override will always be <= 1
-def override_chords(score : list[Bar], bar_index : int, chord, space : float):
+def override_chords(proj : Project, bar_index : int, chord, space : float):
     """Given a chord and the space (length) to override, remove 
     the appropriate number of following chords."""
+
+    score = proj.score
 
     while space > 0:
         [next_bar, next_chord] = move_right(score, bar_index, chord)
@@ -818,8 +817,7 @@ def override_chords(score : list[Bar], bar_index : int, chord, space : float):
 
         # If there is no next chord to override, create a new_bar
         if next_chord is None:
-            new_bar = Bar(score[-1].endy, beats)
-            score.append(new_bar)
+            new_bar = proj.create_new_bar()
 
             new_chord = chord.duplicate_chord()
             new_chord.length = space

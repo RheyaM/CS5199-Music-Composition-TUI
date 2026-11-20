@@ -30,6 +30,8 @@ class Project:
         new_y = self.score[-1].endy
         self.score.append(Bar(new_y, self.beats))
 
+        return self.score[-1]
+
     def reset_currents(self):
         """Reset the current note to the first note of the first bar"""
         self.current_bar = 0
