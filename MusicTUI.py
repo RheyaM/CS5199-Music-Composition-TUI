@@ -82,7 +82,7 @@ def main(stdscr : curses.window) -> None:
                 break
 
             case "\x7f":
-                remove_note(proj.score, stave_pad)
+                remove_note(proj, stave_pad)
 
             case "KEY_UP" | "KEY_DOWN":
                 vertical_navigation(stave_pad, char)
@@ -812,7 +812,7 @@ def override_chords(proj : Project, bar_index : int, chord, space : float):
     score = proj.score
 
     while space > 0:
-        [next_bar, next_chord] = move_right(score, bar_index, chord)
+        [next_bar, next_chord] = proj.move_right(bar_index, chord)
         index = score[bar_index].chords.index(chord)
 
         # If there is no next chord to override, create a new_bar
@@ -946,10 +946,10 @@ def horizontal_navigation(proj, direction):
     navigate_away_from(pads[proj.get_pad_index(current_bar)])
 
     if direction == "KEY_RIGHT":
-        [next_bar, next_chord] = move_right(score, current_bar, current_chord)
+        [next_bar, next_chord] = proj.move_right(current_bar, current_chord)
 
     else:
-        [next_bar, next_chord] = move_left(score, current_bar, current_chord)
+        [next_bar, next_chord] = proj.move_left(current_bar, current_chord)
 
     if next_chord:
         current_bar = next_bar
@@ -980,38 +980,6 @@ def horizontal_navigation(proj, direction):
 
 
     shift_visible(score, score[current_bar].pad)
-
-def move_left(score : list[Bar], bar_index : int, chord : Chord) -> list[int, Chord]:
-    """Given a bar and chord, return the previous chord, regardless of which bar it's in"""
-    # Check the current Bar
-    prev_chord = score[bar_index].get_prev_chord(chord)
-
-    if prev_chord:
-        return [bar_index, prev_chord]
-
-    # Is there a previous Bar?
-    if bar_index > 0:
-        prev_chord = score[bar_index - 1].get_last_chord()
-        return [bar_index - 1, prev_chord]
-
-    # If not, return None
-    return [None, None]
-
-def move_right(score : list[Bar], bar_index : int, chord : Chord) -> list[int, Chord]:
-    """Given a bar and chord, return the next chord along, regardless of which bar it's in"""
-
-    # Check the current Bar
-    next_chord = score[bar_index].get_next_chord(chord)
-
-    if next_chord:
-        return [bar_index, next_chord]
-
-    # Is there a next Bar? Then return the first chord of that Bar
-    if bar_index < len(score) - 1:
-        return [bar_index + 1, score[bar_index + 1].chords[0]]
-
-    # If not, return None
-    return [None, None]
 
 def vertical_navigation(pad, direction):
     """Cursor navigation vertically (within a chord)"""
@@ -1059,7 +1027,7 @@ def get_current_coords():
     x = current_note.pitch
     return [x, y]
 
-def remove_note(score : list[Bar], pad : curses.window):
+def remove_note(proj : Project, pad : curses.window):
     """Remove the current note from the current chord"""
     global current_note
 
@@ -1069,9 +1037,10 @@ def remove_note(score : list[Bar], pad : curses.window):
         Draw.draw_chord(pad, current_chord, stave_height)
 
         if current_chord.rest:
-            [prev_bar, prev_chord] = move_left(score, current_bar, current_chord)
+            [prev_bar, prev_chord] = proj.move_left(current_bar, current_chord)
             if prev_chord:
                 prev_chord.tie = False
+                Draw.draw_entire_score(proj, pads, stave_height)
 
 def parse_note(bar : Bar, stave_pad : curses.window, note : Note):
     """Add the given note to the current chord"""

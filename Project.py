@@ -1,4 +1,5 @@
 from Objects.Bar import Bar
+from Objects.Chord import Chord
 
 class Project:
     """Project class containing a project, its score, and its characteristics"""
@@ -57,3 +58,35 @@ class Project:
     def get_bar(self, bar_index) -> Bar:
         """Return the current bar object"""
         return self.score[bar_index]
+
+    def move_left(self, bar_index : int, chord : Chord) -> list[int, Chord]:
+        """Given a bar and chord, return the previous chord, regardless of which bar it's in"""
+        # Check the current Bar
+        prev_chord = self.score[bar_index].get_prev_chord(chord)
+
+        if prev_chord:
+            return [bar_index, prev_chord]
+
+        # Is there a previous Bar?
+        if bar_index > 0:
+            prev_chord = self.score[bar_index - 1].get_last_chord()
+            return [bar_index - 1, prev_chord]
+
+        # If not, return None
+        return [None, None]
+
+    def move_right(self, bar_index : int, chord : Chord) -> list[int, Chord]:
+        """Given a bar and chord, return the next chord along, regardless of which bar it's in"""
+
+        # Check the current Bar
+        next_chord = self.score[bar_index].get_next_chord(chord)
+
+        if next_chord:
+            return [bar_index, next_chord]
+
+        # Is there a next Bar? Then return the first chord of that Bar
+        if bar_index < len(self.score) - 1:
+            return [bar_index + 1, self.score[bar_index + 1].chords[0]]
+
+        # If not, return None
+        return [None, None]
