@@ -127,7 +127,7 @@ def main(stdscr : curses.window) -> None:
 
             case "[":
                 dec_length(proj.score)
-                Draw.draw_bars_from(proj, pads, current_bar, stave_height)
+                Draw.draw_bars_from(proj, pads, max(current_bar - 1, 0), stave_height)
 
             case "]":
                 inc_length(proj)
@@ -311,7 +311,7 @@ def parse_menu_selections(proj : Project, key : str, time : int):
     if time is not None:
 
         proj.score = change_time_signature(proj.score, time)
-        
+
         proj.beats = time
         redo_all_pads(proj.score)
 
@@ -369,7 +369,7 @@ def resort_chord_list(chord_list : list[Chord], new_beats : int) -> list[Bar]:
 def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
     """Given a score, format it into the new, given time signature"""
     global current_bar
-    
+
     # All chords appended to one list and resorted into bars
     chord_list = []
     for bar in score:
@@ -626,8 +626,6 @@ def save(file : str, stdscr : curses.window, textbox : curses.window) -> str:
     else:
         return save_as(file, stdscr, textbox)
 
-    
-
 def save_as(file : str, stdscr : curses.window, textbox : curses.window) -> str:
     """Save the score to a given file name"""
 
@@ -771,8 +769,6 @@ def dec_length(score : list[Bar]):
     # if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
     redo_all_pads(score)
 
-    # navigate_to_note()
-
 def inc_length(proj : Project):
     """Increase the length of the current chord"""
     score = proj.score
@@ -825,7 +821,7 @@ def override_chords(proj : Project, bar_index : int, chord, space : float):
 
             new_bar.chords.insert(0, new_chord)
 
-            override_chords(score, len(score) - 1, new_chord, new_chord.length)
+            override_chords(proj, len(score) - 1, new_chord, new_chord.length)
 
             chord.tie = True
             space = 0

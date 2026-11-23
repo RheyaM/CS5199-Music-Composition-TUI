@@ -18,10 +18,9 @@ class Draw:
 
     hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes",
              "Opt-Up/Down": "change pitch", "SHIFT-Up/Down": "change octave", 
-             "SHIFT-Left/Right": "swap notes", "[": "decrease note length", 
-             "]": "increase note length", "!": "staccato", ">": "accent", "#": "sharp", 
-             "-": "flat", "n": "natural", "p" : "play score", "m" : "export to PDF",
-             "k" : "Project Settings"}
+             "[": "decrease note length", "]": "increase note length", "!": "staccato", 
+             ">": "accent", "#": "sharp", "-": "flat", "n": "natural", "z" : "undo", 
+             "p" : "play score", "m" : "export to PDF", "k" : "Project Settings"}
 
     @staticmethod
     def draw_treble(pad, x, y):
