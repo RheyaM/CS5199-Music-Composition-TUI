@@ -722,19 +722,6 @@ def redo_all_pads(score : list[Bar]):
 
     del pads[current_pad + 1:]
 
-def shift_elements_right(score : list[Bar], change : int):
-    """Shift the y-coordinates of all notes in and after the current bar"""
-    global current_chord
-    global current_bar
-
-    bar = score[current_bar]
-
-    index = bar.chords.index(current_chord)
-    for chord_index in range(index + 1, len(bar.chords)):
-        bar.chords[chord_index].shift_chord(change)
-
-    score[current_bar].endy += change
-
 def dec_length(score : list[Bar]):
     """Decrease the length of the current chords"""
     global current_chord
@@ -749,21 +736,23 @@ def dec_length(score : list[Bar]):
         return
 
     bar = score[current_bar]
+    # current_chord = bar.half_chord(current_chord)
 
-    # Current chord is the newly created half note
-    current_chord = bar.half_chord(current_chord)
-    current_note = current_chord.notes[0]
+    # current_chord remains halved chord, rather than newly created chord
+    created_chord = bar.half_chord(current_chord)
+    # current_note = current_chord.notes[0]
 
     # get the next chord in the bar
-    next_chord = score[current_bar].get_next_chord(current_chord)
+    next_chord = score[current_bar].get_next_chord(created_chord)
 
-    # If the next chord is not far enough from the newly created current chord, shift it along
-    if next_chord and (next_chord.y < current_chord.y + 4):
-        shift_elements_right(score, 5 - (next_chord.y - current_chord.y))
+    # If the next chord is not far enough from the newly created chord, shift it along
+    if next_chord and (next_chord.y < created_chord.y + 4):
+        score[current_bar].redo_y()
 
     # If its the last chord and overtook the end of the bar
-    if current_chord.y + 5 > score[current_bar].endy:
-        shift_elements_right(score, 5 - (score[current_bar].endy - current_chord.y))
+    if created_chord.y + 5 > score[current_bar].endy:
+        score[current_bar].redo_y()
+
 
     # If its not the last bar and the next bar doesn't start where it should
     # if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
