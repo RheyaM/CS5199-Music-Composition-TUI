@@ -3,6 +3,7 @@ import re
 from Objects.Bar import Bar
 from Objects.Chord import Chord
 from Project import Project
+from Exceptions import InvalidCharException
 
 class Representation:
     """Class for converting score to strings and vice versa"""
@@ -144,22 +145,21 @@ class Representation:
                 # Determining the length of the note
                 [length, bar_notes] = Representation.extract_length(bar_notes)
 
-                if length is None:
-                    length = Representation.current_length
-                else:
-                    Representation.current_length = length
+                Representation.current_length = length
 
                 chord = Chord(pitch, length, 0)
 
                 if attribute is not None:
                     chord.notes[0].toggle_attribute(attribute)
 
+            else:
+                raise InvalidCharException("Unrecognised character input")
+
             bar.chords.append(chord)
 
         bar.redo_y()
         return [bar, bar_notes]
 
-    # TODO: should default to current_length here rather than once None has been extracted
     @staticmethod
     def extract_length(substring):
         """Extract the length from a substring beginning with the length"""
@@ -170,7 +170,7 @@ class Representation:
             if length.group(1)[0] == ".":
                 return [float(length.group(1)), substring[length.end(1)::]]
             return [int(length.group(1)), substring[length.end(1)::]]
-        return [None, substring]
+        return [Representation.current_length, substring]
 
 
     @staticmethod
@@ -307,7 +307,6 @@ class Representation:
                 # Convert to lilypond length convention
                 if chord.length < 1:
                     lilypond_length = int((1 / chord.length) * 4)
-
                 else:
                     lilypond_length = { 1 : "4", 4 : "1", 3 : "2.", 2 : "2"}.get(chord.length)
 

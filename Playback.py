@@ -28,6 +28,7 @@ class Playback:
         # , attack_ms=50, decay_ms=70,release_ms=0
         if file == "":
             file = "playback"
+        file = file.replace(".txt", "")
         music.write_wav_mono(melody, file + ".wav")
         # music.play_audio(melody)
         Playback.play_audio(file + ".wav")

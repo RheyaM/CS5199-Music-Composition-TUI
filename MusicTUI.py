@@ -14,6 +14,7 @@ from Draw import Draw
 from Project import Project
 from Representation import Representation
 from Playback import Playback
+from Exceptions import InvalidCharException, ExitTextBoxException
 
 # MIDDLE_C determines the x-coordinates of many features (rests, notes, treble clef, etc.)
 # This allows easier adjustment of fixed coordinates if the maximum size of the stave is changes
@@ -227,29 +228,50 @@ def string_mode(proj):
     writing_box.scrollok(True)
     tb = curses.textpad.Textbox(writing_box)
     tb.insert_mode = True
+    tb.stripspaces = True
 
     writing_box.refresh()
 
-    tb.edit(changed_key_inputs)
-    text = tb.gather().strip().replace("\n", "")
+    valid = False
+    while not valid:
+        try:
+            tb.edit(changed_key_inputs)
+        except ExitTextBoxException:
+            curses.curs_set(0)
+            return
+        text = tb.gather().strip().replace("\n", "")
 
-    try:
-        proj.score = Representation.string_to_score(text)
+        # if not good, returns (verbose) exception. stays in string writing mode. 
+        # Bars in wrong place: put them in myself.
+        # invalid char (like 'j' or smth): can I return that char in the exception? Or just say invalid char detected
+        # make changed_key_inputs throw another custom exception ("Exited or smth") if h is pressed again? I think can...
 
-        current_bar = 0
-        current_chord = proj.score[current_bar].chords[0]
-        current_note = current_chord.notes[0]
+        # If its still invalid and they want to exit the mode (how?) - reverts to the last valid string
 
-        for bar in proj.score:
-            bar.redo_y()
-        redo_all_pads(proj.score)
+        try:
+            proj.score = Representation.string_to_score(text)
+            proj.score = redo_bar_lengths(proj.score, proj.beats)
+            valid = True
+        except InvalidCharException:
+            open("log.txt", "a", encoding="utf-8").write("\nInvalid char error")
+        except Exception:
+            open("log.txt", "a", encoding="utf-8").write("\nstring_to_score error")
 
-        Draw.draw_entire_score(proj, pads, stave_height)
 
-    except Exception:
-        open("log.txt", "a", encoding="utf-8").write("\nstring_to_score error")
+    current_bar = 0
+    current_chord = proj.score[current_bar].chords[0]
+    current_note = current_chord.notes[0]
+
+    for bar in proj.score:
+        bar.redo_y()
+
+    redo_all_pads(proj.score)
+
+    Draw.draw_entire_score(proj, pads, stave_height)
 
     curses.curs_set(0)
+
+
 
 def changed_key_inputs(x):
     """Alternative integer returns for keystrokes"""
@@ -257,6 +279,8 @@ def changed_key_inputs(x):
         return 7
     if x == 127:
         return 263
+    if x == 104:
+        raise ExitTextBoxException
     return x
 
 def set_curses_modes(stdscr):
@@ -324,7 +348,7 @@ def parse_menu_selections(proj : Project, key : str, time : int):
         Draw.draw_beginning(proj, pads[0], MIDDLE_C)
 
 def resort_chord_list(chord_list : list[Chord], new_beats : int) -> list[Bar]:
-    """Given a list of chords and beats per bar, resort the chords into bars.
+    """Given a list of chords and beats per bar, resort the existing chords into bars.
     Return the new score"""
     new_score = []
     bar_index = 0
@@ -363,12 +387,9 @@ def resort_chord_list(chord_list : list[Chord], new_beats : int) -> list[Bar]:
 
     return new_score
 
-
-# Making a long list of chords
-# TODO: account for change in beats when undoing
-def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
-    """Given a score, format it into the new, given time signature"""
-    global current_bar
+def redo_bar_lengths(score : list[Bar], length : int) -> list[Bar]:
+    """Given a score, return a copy of new score with bars of the given length
+    and appropriately added rests"""
 
     # All chords appended to one list and resorted into bars
     chord_list = []
@@ -376,14 +397,25 @@ def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
         for chord in bar.chords:
             chord_list.append(chord)
 
-    new_score = resort_chord_list(chord_list, new_beats)
-    bar = new_score[-1]
+    new_score = resort_chord_list(chord_list, length)
 
     # If the last bar needs to be lengthened with rests
-    if bar.total_length() < new_beats:
-        new_chord = Chord(-1, new_beats - bar.total_length(), 0)
+    last_bar = new_score[-1]
+    if last_bar.total_length() < length:
+        new_chord = Chord(-1, length - last_bar.total_length(), 0)
         rests_to_add = split_chord(new_chord)
-        bar.chords = bar.chords + rests_to_add
+        last_bar.chords = last_bar.chords + rests_to_add
+
+    return new_score
+
+
+# Making a long list of chords
+# TODO: account for change in beats when undoing
+def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
+    """Format the project into the new, given time signature"""
+    global current_bar
+
+    new_score = redo_bar_lengths(score, new_beats)
 
     for bar in new_score:
         bar.redo_y()
@@ -736,11 +768,9 @@ def dec_length(score : list[Bar]):
         return
 
     bar = score[current_bar]
-    # current_chord = bar.half_chord(current_chord)
 
     # current_chord remains halved chord, rather than newly created chord
     created_chord = bar.half_chord(current_chord)
-    # current_note = current_chord.notes[0]
 
     # get the next chord in the bar
     next_chord = score[current_bar].get_next_chord(created_chord)
@@ -753,9 +783,6 @@ def dec_length(score : list[Bar]):
     if created_chord.y + 5 > score[current_bar].endy:
         score[current_bar].redo_y()
 
-
-    # If its not the last bar and the next bar doesn't start where it should
-    # if current_bar < len(score) - 1 and score[current_bar + 1].y != score[current_bar].endy:
     redo_all_pads(score)
 
 def inc_length(proj : Project):
