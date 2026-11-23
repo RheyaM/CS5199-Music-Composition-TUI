@@ -2,7 +2,6 @@
 import re
 from Objects.Bar import Bar
 from Objects.Chord import Chord
-from Objects.Note import Note
 from Project import Project
 
 class Representation:
@@ -10,9 +9,16 @@ class Representation:
 
     MIDDLE_C : int = 9
 
-    NOTE_DICT : dict = {"c": MIDDLE_C + 7, "d": MIDDLE_C + 6, "e": MIDDLE_C + 5, "f": MIDDLE_C + 4,
+    NOTE_DICT : dict = {"c": MIDDLE_C + 7, "d": MIDDLE_C + 6,  "e": MIDDLE_C + 5, "f": MIDDLE_C + 4,
                         "g": MIDDLE_C + 3, "a": MIDDLE_C + 2, "b": MIDDLE_C + 1}
-    pitch_dict = {v: k for k, v in NOTE_DICT.items()}
+    PITCH_DICT = {v: k for k, v in NOTE_DICT.items()}
+
+    KEY_TO_NOTES : dict = {"C Major": [], "G Major": ["f"], "D Major": ["f", "c"],
+                    "A Major": ["f", "c", "g"], "E Major": ["f", "c", "g", "d"],
+                    "B Major": ["f", "c", "g", "d", "a"], 
+                    "F# Major": ["f", "c", "g", "d", "a", "e"],
+                    "Db Major": ["b", "e", "a", "d", "g"], "Ab Major": ["b", "e", "a", "d"], 
+                    "Eb Major": ["b", "e", "a"], "Bb Major": ["b", "e"], "F Major": ["b"]}
 
     current_length = 0
 
@@ -68,8 +74,8 @@ class Representation:
         if pitch == -1:
             return "r"
 
-        if pitch in Representation.pitch_dict.keys():
-            return Representation.pitch_dict[pitch]
+        if pitch in Representation.PITCH_DICT.keys():
+            return Representation.PITCH_DICT[pitch]
 
         direction = 0
 
@@ -83,7 +89,7 @@ class Representation:
             direction += 1
             char = ","
 
-        note = Representation.pitch_dict[pitch] + (char * direction)
+        note = Representation.PITCH_DICT[pitch] + (char * direction)
 
         return note
 
@@ -267,6 +273,14 @@ class Representation:
 
         string = "\\version \"2.26.0\"{ \\fixed c' { \\numericTimeSignature "
 
+        if proj.key[1] == "b" or proj.key == "F Major":
+            to_make_sharp = []
+            to_make_flat = Representation.KEY_TO_NOTES[proj.key]
+
+        else:
+            to_make_flat = []
+            to_make_sharp = Representation.KEY_TO_NOTES[proj.key]
+
         string += f"\\time {beats}/4 "
 
         [pitch, mode] = key.split(" ")
@@ -280,9 +294,9 @@ class Representation:
                 for note in chord.notes:
                     notestr = Representation.pitch_to_note(note.pitch)
 
-                    if note.sharp():
+                    if note.sharp() or notestr[0] in to_make_sharp:
                         notestr = notestr[0] + "is" + notestr[1::]
-                    elif note.flat():
+                    elif note.flat() or notestr[0] in to_make_flat:
                         notestr = notestr[0] + "es" + notestr[1::]
 
                     chordstr += " " + notestr
