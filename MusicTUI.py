@@ -269,20 +269,16 @@ def string_mode(proj):
 def input_box_key_inputs(x):
     """Alternative integer returns for textboxes"""
     if x == 10:
-            return 7
+        return 7
     if x == 127:
         return 263
     return x
 
 def string_mode_key_inputs(x):
     """Alternative integer returns for string_mode"""
-    if x == 10:
-        return 7
-    if x == 127:
-        return 263
     if x == 104:
         raise ExitTextBoxException
-    return x
+    return input_box_key_inputs(x)
 
 def set_curses_modes(stdscr):
     """Set up curses"""

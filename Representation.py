@@ -3,7 +3,7 @@ import re
 from Objects.Bar import Bar
 from Objects.Chord import Chord
 from Project import Project
-from Exceptions import InvalidCharException, OutOfStaveBoundsException
+from Exceptions import InvalidCharException
 
 class Representation:
     """Class for converting score to strings and vice versa"""
@@ -141,8 +141,6 @@ class Representation:
 
             elif ch in Representation.NOTE_DICT or ch == "r":
                 [pitch, bar_notes] = Representation.get_chord_note(bar_notes)
-                pitch = max(2, pitch)
-                pitch = min(25, pitch)
 
                 [attribute, bar_notes] = Representation.extract_note_attributes(bar_notes)
 
@@ -205,10 +203,8 @@ class Representation:
             pitch = Representation.NOTE_DICT[note]
             pitch -= 7 * octave_indicators
 
-            # if pitch < 0:
-            #     raise OutOfStaveBoundsException("Note is too high")
-            # if pitch > Representation.STAVE_HEIGHT - 1:
-            #     raise OutOfStaveBoundsException("Note is too low")
+            pitch = max(pitch, 2)
+            pitch = min(Representation.STAVE_HEIGHT - 3, pitch)
 
             return [pitch, substring]
 

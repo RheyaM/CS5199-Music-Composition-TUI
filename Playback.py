@@ -4,18 +4,16 @@ import pygame
 from pygame import mixer
 from Objects.Bar import Bar
 
+class Playback:
+    """Class for creating and playing .wav files"""
 
-coords_to_pitch = { 0: 0, 1 : -2, 2 : -4, 3 : -5, 4 : -7, 5 : -9, 6 : -10}
+    COORDS_TO_PITCH = { 0: 0, 1 : -2, 2 : -4, 3 : -5, 4 : -7, 5 : -9, 6 : -10}
 
-keys : dict = {"C Major": [], "G Major": [6], "D Major": [6, 2],
+    KEYS : dict = {"C Major": [], "G Major": [6], "D Major": [6, 2],
                "A Major": [6, 2, 5], "E Major": [6, 2, 5, 1],
                "B Major": [6, 2, 5, 1, 4], "F# Major": [6, 2, 5, 1, 4, 0],
                "Db Major": [3, 0, 4, 1, 5], "Ab Major": [3, 0, 4, 1], 
                "Eb Major": [3, 0, 4], "Bb Major": [3, 0], "F Major": [3]}
-
-
-class Playback:
-    """Class for creating and playing .wav files"""
 
     @staticmethod
     def create_audio(score, file, key):
@@ -25,12 +23,10 @@ class Playback:
         melody = music.horizontal_stack(*[music.adsr(sonic_vector=n)
                                   for n in chords])
 
-        # , attack_ms=50, decay_ms=70,release_ms=0
         if file == "":
             file = "playback"
         file = file.replace(".txt", "")
         music.write_wav_mono(melody, file + ".wav")
-        # music.play_audio(melody)
         Playback.play_audio(file + ".wav")
 
     @staticmethod
@@ -57,14 +53,9 @@ class Playback:
     def score_to_playback(score : list[Bar], key):
         """Generate sonic vectors for each chord in the score"""
 
-        
-
         chord_list = []
         for bar in score:
             chord_list.extend(bar.chords)
-
-        open("log.txt", "a").write("\nindex : " + str([c.tie for c in chord_list]))
-        
 
         chords = []
 
@@ -117,9 +108,10 @@ class Playback:
 
             to_multiply = pitch // 7
             standardised = pitch - (to_multiply * 7)
-            dict_pitch = coords_to_pitch[standardised]
+            dict_pitch = Playback.COORDS_TO_PITCH[standardised]
 
             dict_pitch -= (12 * to_multiply)
+            standardised = note.pitch - (7 * (note.pitch//7))
 
             if note.attribute == "sharp":
                 dict_pitch += 1
@@ -127,8 +119,7 @@ class Playback:
             elif note.attribute == "flat":
                 dict_pitch -= 1
 
-            elif note.pitch - (7 * (note.pitch//7)) in keys[key] and note.attribute != "natural":
-
+            elif standardised in Playback.KEYS[key] and note.attribute != "natural":
                 if key[1] == "b" or key == "F Major":
                     dict_pitch -= 1
                 else:
