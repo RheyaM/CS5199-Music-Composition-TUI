@@ -123,6 +123,14 @@ class Draw:
             else:
                 string = "⚪"
 
+            if note.pitch < 6:
+                for i in range(4, note.pitch - 1, -2):
+                    pad.addstr(i, y - 1, "─", curses.color_pair(2))
+
+            if note.pitch > 15:
+                for i in range(16, note.pitch + 1, 2):
+                    pad.addstr(i, y - 1, "─", curses.color_pair(2))
+
             pad.addstr(note.pitch, y, string, curses.color_pair(2))
             Draw.draw_attributes(pad, note, chord)
 
