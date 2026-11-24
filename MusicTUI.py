@@ -36,7 +36,7 @@ current_note : Note = None # Note object
 prev_stack : list[[str, int, int, int]] = [["B:4.|r1rrr|rrrr|", current_bar, 0, 0]]
 
 # stave_height - to determine how many octaves we can use
-stave_height : int = 26
+STAVE_HEIGHT : int = 26
 
 stdscr_width : int = 0
 stdscr_height : int = 0
@@ -44,6 +44,7 @@ stdscr_height : int = 0
 def main(stdscr : curses.window) -> None:
     global stdscr_width
     global stdscr_height
+    global current_bar
     global current_chord
     global current_note
     global prev_stack
@@ -105,12 +106,6 @@ def main(stdscr : curses.window) -> None:
             case "KEY_SF":
                 transpose("down", stave_pad, 7)
 
-            # case "KEY_SRIGHT":
-            #     shift(stave_pad, "Right")
-
-            # case "KEY_SLEFT":
-            #     shift(stave_pad, "Left")
-
             case "#":
                 toggle_note_attribute(stave_pad, "sharp")
 
@@ -128,11 +123,11 @@ def main(stdscr : curses.window) -> None:
 
             case "[":
                 dec_length(proj.score)
-                Draw.draw_bars_from(proj, pads, max(current_bar - 1, 0), stave_height)
+                Draw.draw_bars_from(proj, pads, max(current_bar - 1, 0), STAVE_HEIGHT)
 
             case "]":
                 inc_length(proj)
-                Draw.draw_bars_from(proj, pads, current_bar, stave_height)
+                Draw.draw_bars_from(proj, pads, current_bar, STAVE_HEIGHT)
 
             case "s":
                 file = save(file, stdscr, textbox)
@@ -156,7 +151,7 @@ def main(stdscr : curses.window) -> None:
             case "z":
                 prev_stack = undo(proj)
                 change_made = False
-                Draw.draw_entire_score(proj, pads, stave_height)
+                Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
             case "m":
                 lilypond_string = Representation.score_to_lilypond(proj)
@@ -171,7 +166,13 @@ def main(stdscr : curses.window) -> None:
             case "h":
                 navigate_away_from(stave_pad)
                 refresh_visible_pads(proj.score, stdscr)
-                string_mode(proj)
+                string_mode(proj, stdscr)
+
+            case "0":
+                proj = clear_all()
+                current_bar = 0
+                current_chord = proj.score[current_bar].chords[0]
+                current_note = current_chord.notes[0]
 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -180,7 +181,7 @@ def main(stdscr : curses.window) -> None:
                 if stdscr_width >= 113 and stdscr_height >= 20:
                     Draw.draw_hints(hints, stdscr_width)
                     redo_all_pads(proj.score)
-                    Draw.draw_entire_score(proj, pads, stave_height)
+                    Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
                 change_made = False
 
@@ -216,12 +217,20 @@ def main(stdscr : curses.window) -> None:
 
         open("keylog.txt", "a", encoding="utf-8").write("\n" + char)
 
-def string_mode(proj):
+def clear_all() -> Project:   
+    """Clear the entire stave"""
+
+    proj = Project()
+    Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
+    return proj
+
+def string_mode(proj, stdscr):
     """Switching to string mode"""
     global current_bar
     global current_chord
     global current_note
 
+    exception_win = None
     writing_box = curses.newwin(2, stdscr_width - 3, stdscr_height - 5, 0)
     writing_box.addstr(Representation.score_to_string(proj))
 
@@ -241,7 +250,11 @@ def string_mode(proj):
         except ExitTextBoxException:
             curses.curs_set(0)
             return
+        
         text = tb.gather().strip().replace("\n", "")
+        if exception_win is not None:
+            Draw.remove_exception(exception_win)
+            exception_win = None
 
         try:
             proj.score = Representation.string_to_score(text)
@@ -249,9 +262,9 @@ def string_mode(proj):
             valid = True
         except InvalidCharException:
             open("log.txt", "a", encoding="utf-8").write("\nInvalid char error")
+            exception_win = Draw.draw_exception(stdscr, stdscr_height - 8, 0, "Invalid character\ndetected")
         except Exception:
             open("log.txt", "a", encoding="utf-8").write("\nstring_to_score error")
-
 
     current_bar = 0
     current_chord = proj.score[current_bar].chords[0]
@@ -262,7 +275,7 @@ def string_mode(proj):
 
     redo_all_pads(proj.score)
 
-    Draw.draw_entire_score(proj, pads, stave_height)
+    Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
     curses.curs_set(0)
 
@@ -338,7 +351,7 @@ def parse_menu_selections(proj : Project, key : str, time : int):
 
         shift_visible(proj.score, 0)
 
-        Draw.draw_entire_score(proj, pads, stave_height)
+        Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
     if key is not None:
         proj.key = key
@@ -499,7 +512,7 @@ def set_up_tui(proj : Project, stdscr: curses.window) -> None:
     stdscr.refresh()
     pads.append(stave_pad)
 
-    Draw.draw_entire_score(proj, pads, stave_height)
+    Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
     # navigate_to_note()
 
 def set_up_textbox(proj) -> curses.window:
@@ -619,6 +632,10 @@ def load(file : str, proj : Project, stdscr : curses.window) -> str:
     box.edit(input_box_key_inputs)
     text = box.gather().replace("\n","").replace(" ", "")
 
+    if text == "":
+        Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
+        return file
+
     try:
         with open(text, "r", encoding="utf-8") as myfile:
             string = myfile.read().replace("\n", "").replace(" ", "")
@@ -638,7 +655,7 @@ def load(file : str, proj : Project, stdscr : curses.window) -> str:
     current_note = current_chord.notes[0]
 
     redo_all_pads(proj.score)
-    Draw.draw_entire_score(proj, pads, stave_height)
+    Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
     shift_visible(proj.score, 0)
 
@@ -717,8 +734,8 @@ def shift(pad : curses.window, direction : str):
 
         current_bar = new_bar
 
-        Draw.draw_chord(pad, to_switch, stave_height)
-        Draw.draw_chord(pad, current_chord, stave_height)
+        Draw.draw_chord(pad, to_switch, STAVE_HEIGHT)
+        Draw.draw_chord(pad, current_chord, STAVE_HEIGHT)
         # navigate_to_note()
 
 def redo_all_pads(score : list[Bar]):
@@ -909,7 +926,7 @@ def toggle_note_attribute(pad : curses.window, attr : str):
         case "staccato":
             current_chord.toggle_staccato()
 
-    Draw.draw_chord(pad, current_chord, stave_height)
+    Draw.draw_chord(pad, current_chord, STAVE_HEIGHT)
     # navigate_to_note()
 
 def navigate_away_from(pad):
@@ -979,10 +996,10 @@ def horizontal_navigation(proj, direction):
         # If the current bar overflows off the screen
         if score[current_bar].endy >= stdscr_width - 3:
             redo_all_pads(proj.score)
-            Draw.draw_entire_score(proj, pads, stave_height)
+            Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
         else:
-            Draw.draw_bar(proj, pads, -1, stave_height)
+            Draw.draw_bar(proj, pads, -1, STAVE_HEIGHT)
 
         current_chords = proj.score[current_bar].chords
         change_to_score(current_chords, Representation.score_to_string(proj))
@@ -1003,7 +1020,7 @@ def vertical_navigation(pad, direction):
         if current_chord.get_other_note(current_note, add):
             current_note = current_chord.get_other_note(current_note, add)
 
-    Draw.draw_chord(pad, current_chord, stave_height)
+    Draw.draw_chord(pad, current_chord, STAVE_HEIGHT)
     # navigate_to_note()
 
 # TODO: deal with a note already being in that position
@@ -1020,13 +1037,13 @@ def transpose(direction, stave_pad, change):
             new_pitch = current_note.pitch + change
 
         # If new pitch is outside valid stave height
-        if new_pitch < 2 or new_pitch >= stave_height - 2:
+        if new_pitch < 2 or new_pitch >= STAVE_HEIGHT - 2:
             return
 
         current_chord.remove_note(current_note)
         current_note = current_chord.add_note(new_pitch)
 
-        Draw.draw_chord(stave_pad, current_chord, stave_height)
+        Draw.draw_chord(stave_pad, current_chord, STAVE_HEIGHT)
         # navigate_to_note()
 
 def get_current_coords():
@@ -1043,13 +1060,13 @@ def remove_note(proj : Project, pad : curses.window):
     if not current_chord.rest:
         current_note = current_chord.remove_note(current_note)
 
-        Draw.draw_chord(pad, current_chord, stave_height)
+        Draw.draw_chord(pad, current_chord, STAVE_HEIGHT)
 
         if current_chord.rest:
             [prev_bar, prev_chord] = proj.move_left(current_bar, current_chord)
             if prev_chord:
                 prev_chord.tie = False
-                Draw.draw_entire_score(proj, pads, stave_height)
+                Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
 def parse_note(bar : Bar, stave_pad : curses.window, note : Note):
     """Add the given note to the current chord"""
@@ -1081,6 +1098,6 @@ def parse_note(bar : Bar, stave_pad : curses.window, note : Note):
         current_chord = new_chord
         current_note = current_chord.notes[0]
 
-    Draw.draw_chord(stave_pad, current_chord, stave_height)
+    Draw.draw_chord(stave_pad, current_chord, STAVE_HEIGHT)
 
 wrapper(main)

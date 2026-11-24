@@ -1,5 +1,6 @@
 
 import curses
+from curses.textpad import rectangle
 import math
 
 from Objects.Chord import Chord
@@ -16,11 +17,11 @@ class Draw:
                 "Db Major": [10, 7, 11, 8, 12], "Ab Major": [10, 7, 11, 8], 
                 "Eb Major": [10, 7, 11], "Bb Major": [10, 7], "F Major": [10]}
 
-    hints = {"q": "Quit", "s": "save file", "S": "save file as", "SHIFT-note": "add multiple notes",
-             "Opt-Up/Down": "change pitch", "SHIFT-Up/Down": "change octave", 
-             "[": "decrease note length", "]": "increase note length", "!": "staccato", 
-             ">": "accent", "#": "sharp", "-": "flat", "n": "natural", "z" : "undo", 
-             "p" : "play score", "m" : "export to PDF", "k" : "Project Settings"}
+    hints = {"q": "Quit", "s": "Save File", "S": "Save File As", "SHIFT-note": "Add Multiple Notes",
+             "Opt-Up/Down": "Change Pitch", "SHIFT-Up/Down": "Change Octave", 
+             "[": "Decrease Note Length", "]": "Increase Note Length", "!": "Staccato", 
+             ">": "Accent", "#": "Sharp", "-": "Flat", "n": "Natural", "z" : "Undo", 
+             "p" : "Play Score", "m" : "Export to PDF", "k" : "Project Settings", "0": "Clear All"}
 
     @staticmethod
     def draw_treble(pad, x, y):
@@ -351,3 +352,21 @@ class Draw:
             for chord in bar.chords:
                 if chord.tie and not chord.rest:
                     Draw.draw_tie(pads[bar.pad], chord)
+
+    @staticmethod
+    def draw_exception(stdscr : curses.window, x : int, y : int, message : str) -> curses.window:
+        """Draw a rectangle to store the exception"""
+        exception_win = curses.newwin(2, 20, x, 1)
+        curses.textpad.rectangle(stdscr, x - 1, 0, x + 2, 21)
+        stdscr.refresh()
+
+        exception_win.addstr(0, 0, message)
+        exception_win.refresh()
+
+        return exception_win
+
+    @staticmethod
+    def remove_exception(exception_win : curses.window) -> None:
+        """Remove the exception rectangle"""
+        # exception_win.clear()
+        exception_win.erase()
