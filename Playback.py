@@ -57,29 +57,50 @@ class Playback:
     def score_to_playback(score : list[Bar], key):
         """Generate sonic vectors for each chord in the score"""
 
+        
+
+        chord_list = []
+        for bar in score:
+            chord_list.extend(bar.chords)
+
+        open("log.txt", "a").write("\nindex : " + str([c.tie for c in chord_list]))
+        
+
         chords = []
 
-        for bar in score:
-            for chord in bar.chords:
-                length = chord.length / 2
+        index = 0
+        length = 0
+        while index < len(chord_list):
+            chord = chord_list[index]
+
+            length += (chord.length / 2)
+
+            # If the current chord is a tie, add its length to the next chord
+            if chord.tie:
+                index += 1
+                continue
+
+            if chord.staccato:
+                length = 0.2
+            xvalues = Playback.chord_to_pitches(chord, key)
+
+            if xvalues[0] is None:
+                chords.append(music.silence(length))
+
+            else:
+                freqs = music.pitch_to_freq(start_freq=440, semitones=xvalues)
+                chord_to_add = music.note(freqs[0], length)
+                if len(freqs) > 1:
+                    for f in freqs[1::]:
+                        chord_to_add = music.mix(chord_to_add, music.note(f, length))
+
+                chords.append(chord_to_add)
+
                 if chord.staccato:
-                    length = 0.2
-                xvalues = Playback.chord_to_pitches(chord, key)
+                    chords.append(music.silence((chord.length / 2) - 0.2))
 
-                if xvalues[0] is None:
-                    chords.append(music.silence(length))
-
-                else:
-                    freqs = music.pitch_to_freq(start_freq=440, semitones=xvalues)
-                    chord_to_add = music.note(freqs[0], length)
-                    if len(freqs) > 1:
-                        for f in freqs[1::]:
-                            chord_to_add = music.mix(chord_to_add, music.note(f, length))
-
-                    chords.append(chord_to_add)
-
-                    if chord.staccato:
-                        chords.append(music.silence((chord.length / 2) - 0.2))
+            length = 0
+            index += 1
 
         return chords
 

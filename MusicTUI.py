@@ -169,6 +169,8 @@ def main(stdscr : curses.window) -> None:
                 set_curses_modes(stdscr)
 
             case "h":
+                navigate_away_from(stave_pad)
+                refresh_visible_pads(proj.score, stdscr)
                 string_mode(proj)
 
             case "KEY_RESIZE":
@@ -235,18 +237,11 @@ def string_mode(proj):
     valid = False
     while not valid:
         try:
-            tb.edit(changed_key_inputs)
+            tb.edit(string_mode_key_inputs)
         except ExitTextBoxException:
             curses.curs_set(0)
             return
         text = tb.gather().strip().replace("\n", "")
-
-        # if not good, returns (verbose) exception. stays in string writing mode. 
-        # Bars in wrong place: put them in myself.
-        # invalid char (like 'j' or smth): can I return that char in the exception? Or just say invalid char detected
-        # make changed_key_inputs throw another custom exception ("Exited or smth") if h is pressed again? I think can...
-
-        # If its still invalid and they want to exit the mode (how?) - reverts to the last valid string
 
         try:
             proj.score = Representation.string_to_score(text)
@@ -271,10 +266,16 @@ def string_mode(proj):
 
     curses.curs_set(0)
 
+def input_box_key_inputs(x):
+    """Alternative integer returns for textboxes"""
+    if x == 10:
+            return 7
+    if x == 127:
+        return 263
+    return x
 
-
-def changed_key_inputs(x):
-    """Alternative integer returns for keystrokes"""
+def string_mode_key_inputs(x):
+    """Alternative integer returns for string_mode"""
     if x == 10:
         return 7
     if x == 127:
@@ -619,7 +620,7 @@ def load(file : str, proj : Project, stdscr : curses.window) -> str:
     rectangle(stdscr, stdscr_height - 6, 1, stdscr_height - 3, 43)
     stdscr.refresh()
 
-    box.edit(changed_key_inputs)
+    box.edit(input_box_key_inputs)
     text = box.gather().replace("\n","").replace(" ", "")
 
     try:
@@ -671,7 +672,7 @@ def save_as(file : str, stdscr : curses.window, textbox : curses.window) -> str:
     rectangle(stdscr, stdscr_height - 6, 1, stdscr_height - 3, 43)
     stdscr.refresh()
 
-    box.edit(changed_key_inputs)
+    box.edit(input_box_key_inputs)
     text = box.gather().replace("\n", "").replace(" ", "")
 
 
