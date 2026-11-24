@@ -103,11 +103,8 @@ class Representation:
 
         return note
 
-
-    # TODO: maybe removing charrs as we go isn't the most efficient? space or timing wise?
-    # Just need to iterate probably
     @staticmethod
-    def string_to_score(string):
+    def string_to_proj(string : str) -> Project:
         """Parse the given string and create score list"""
 
         score = []
@@ -123,7 +120,11 @@ class Representation:
             [bar, notes] = Representation.extract_bar(notes, beats)
             score.append(bar)
 
-        return score
+        proj = Project()
+        proj.score = score
+        proj.beats = beats
+
+        return proj
 
     @staticmethod
     def extract_bar(substring : str, beats):
@@ -296,10 +297,7 @@ class Representation:
         else:
             chord.length = length
             Representation.current_length = length
-
-        # Get any chord attributes here (staccato, accent, tie)
-
-
+            
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]
 

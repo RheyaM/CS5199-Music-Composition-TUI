@@ -152,10 +152,10 @@ def main(stdscr : curses.window) -> None:
                 change_made = False
 
             case "l" | "L":
-                file = load(file, proj, stdscr)
+                [proj, file] = load(file, proj, stdscr)
 
             case "z":
-                prev_stack = undo(proj)
+                [proj, prev_stack] = undo(proj)
                 change_made = False
                 Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
@@ -172,13 +172,11 @@ def main(stdscr : curses.window) -> None:
             case "h":
                 navigate_away_from(stave_pad)
                 refresh_visible_pads(proj.score, stdscr)
-                string_mode(proj, stdscr)
+                proj = string_mode(proj, stdscr)
 
             case "0":
                 proj = clear_all()
-                current_bar = 0
-                current_chord = proj.score[current_bar].chords[0]
-                current_note = current_chord.notes[0]
+                reset_currents(proj)
 
             case "KEY_RESIZE":
                 stdscr_height, stdscr_width = stdscr.getmaxyx()
@@ -194,6 +192,20 @@ def main(stdscr : curses.window) -> None:
             case _:
                 if char in ALL_NOTES:
                     parse_note(proj.get_bar(current_bar), stave_pad, char)
+
+                # CMMD - Left: return to the beginning of the score
+                elif ord(char) == 1:
+                    navigate_away_from(stave_pad)
+                    reset_currents(proj)
+                    shift_visible(proj.score, 0)
+
+                # CMMD - Right: move to the end of the score
+                elif ord(char) == 5:
+                    navigate_away_from(stave_pad)
+                    current_bar = len(proj.score) - 1
+                    current_chord = proj.score[current_bar].chords[-1]
+                    current_note = current_chord.notes[0]
+                    shift_visible(proj.score, len(pads) - 1)
 
                 else:
                     stave_pad.addstr(0, 0, char)
@@ -222,6 +234,16 @@ def main(stdscr : curses.window) -> None:
         stave_pad = get_current_pad(proj)
 
         open("keylog.txt", "a", encoding="utf-8").write("\n" + char)
+
+def reset_currents(proj : Project):
+    """Reset the current note to the first of the score"""
+    global current_bar
+    global current_chord
+    global current_note
+
+    current_bar = 0
+    current_chord = proj.score[current_bar].chords[0]
+    current_note = current_chord.notes[0]
 
 def clear_all() -> Project:   
     """Clear the entire stave"""
@@ -267,15 +289,13 @@ def string_mode(proj, stdscr):
             exception_win = None
 
         try:
-            proj.score = Representation.string_to_score(text)
+            proj = Representation.string_to_proj(text)
             proj.score = redo_bar_lengths(proj.score, proj.beats)
             valid = True
         except InvalidCharException:
             exception_win = Draw.draw_exception(stdscr, stdscr_height - 8, 0, "Invalid character\ndetected")
 
-    current_bar = 0
-    current_chord = proj.score[current_bar].chords[0]
-    current_note = current_chord.notes[0]
+    reset_currents(proj)
 
     for bar in proj.score:
         bar.redo_y()
@@ -286,6 +306,8 @@ def string_mode(proj, stdscr):
     refresh_visible_pads(proj.score, stdscr)
 
     curses.curs_set(0)
+
+    return proj
 
 def input_box_key_inputs(x):
     """Alternative integer returns for textboxes"""
@@ -464,11 +486,11 @@ def undo(proj : Project):
     global current_note
 
     if len(prev_stack) == 1:
-        return prev_stack
+        return [proj, prev_stack]
 
     [string, bar_index, chord_index, note_index] = prev_stack[-2]
 
-    proj.score = Representation.string_to_score(string)
+    proj = Representation.string_to_proj(string)
 
     current_bar = bar_index
     current_chord = proj.score[bar_index].chords[chord_index]
@@ -479,7 +501,7 @@ def undo(proj : Project):
 
     prev_stack.pop(-1)
 
-    return prev_stack
+    return [proj, prev_stack]
 
 def change_to_score(current_chords : list[Chord], new_string : str) -> None:
     """Update the string textbox and the stack of previous strings"""
@@ -650,23 +672,21 @@ def load(file : str, proj : Project, stdscr : curses.window) -> str:
 
         file = text #Will include .txt
 
-        proj.score = Representation.string_to_score(string)
+        proj = Representation.string_to_proj(string)
         del prev_stack[:]
 
     except FileNotFoundError as e:
         with open("log.txt", "a", encoding="utf8") as myfile:
             myfile.write("\n" + str(e))
 
-    current_bar = 0
-    current_chord = proj.score[current_bar].chords[0]
-    current_note = current_chord.notes[0]
+    reset_currents(proj)
 
     redo_all_pads(proj.score)
     Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
 
     shift_visible(proj.score, 0)
 
-    return file
+    return [proj, file]
 
 def save(file : str, stdscr : curses.window, textbox : curses.window) -> str:
     """Save the current score to the current file name"""
