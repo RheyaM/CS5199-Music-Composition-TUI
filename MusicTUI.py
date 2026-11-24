@@ -94,6 +94,12 @@ def main(stdscr : curses.window) -> None:
                 horizontal_navigation(proj, char)
                 change_made = False
 
+            case "KEY_SRIGHT":
+                shift(proj, stave_pad, "Right")
+
+            case "KEY_SLEFT":
+                shift(proj, stave_pad, "Left")
+
             case "kDN5" | ",":
                 transpose("down", stave_pad, 1)
 
@@ -219,6 +225,10 @@ def main(stdscr : curses.window) -> None:
 
 def clear_all() -> Project:   
     """Clear the entire stave"""
+    global pads
+
+    for pad in pads:
+        pad.clear()
 
     proj = Project()
     Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
@@ -250,7 +260,7 @@ def string_mode(proj, stdscr):
         except ExitTextBoxException:
             curses.curs_set(0)
             return
-        
+
         text = tb.gather().strip().replace("\n", "")
         if exception_win is not None:
             Draw.remove_exception(exception_win)
@@ -261,10 +271,7 @@ def string_mode(proj, stdscr):
             proj.score = redo_bar_lengths(proj.score, proj.beats)
             valid = True
         except InvalidCharException:
-            open("log.txt", "a", encoding="utf-8").write("\nInvalid char error")
             exception_win = Draw.draw_exception(stdscr, stdscr_height - 8, 0, "Invalid character\ndetected")
-        except Exception:
-            open("log.txt", "a", encoding="utf-8").write("\nstring_to_score error")
 
     current_bar = 0
     current_chord = proj.score[current_bar].chords[0]
@@ -276,6 +283,7 @@ def string_mode(proj, stdscr):
     redo_all_pads(proj.score)
 
     Draw.draw_entire_score(proj, pads, STAVE_HEIGHT)
+    refresh_visible_pads(proj.score, stdscr)
 
     curses.curs_set(0)
 
@@ -603,8 +611,7 @@ def get_pad_min_max(score : list[Bar], pad_index : int) -> list[int, int]:
                 if not chord.rest and notes[0].pitch - additional < top:
                     top = notes[0].pitch - additional
 
-                if notes[-1].pitch + additional > bottom:
-                    bottom = notes[-1].pitch + additional
+                bottom = max(bottom, notes[-1].pitch + additional)
 
         if bar.pad > pad_index:
             return [top, bottom + 1]
@@ -647,8 +654,8 @@ def load(file : str, proj : Project, stdscr : curses.window) -> str:
         del prev_stack[:]
 
     except FileNotFoundError as e:
-        with open("log.txt", "r", encoding="utf8") as file:
-            file.write("\n" + str(e))
+        with open("log.txt", "a", encoding="utf8") as myfile:
+            myfile.write("\n" + str(e))
 
     current_bar = 0
     current_chord = proj.score[current_bar].chords[0]
@@ -702,18 +709,18 @@ def save_as(file : str, stdscr : curses.window, textbox : curses.window) -> str:
 
     return file
 
-def shift(pad : curses.window, direction : str):
+def shift(proj : Project, pad : curses.window, direction : str):
     """Swapping two chords in the direction given"""
     global current_bar
 
-    bar : Bar = score[current_bar]
+    bar : Bar = proj.score[current_bar]
 
     index : int = bar.chords.index(current_chord)
 
     if direction == "Right":
-        [new_bar, to_switch] = move_right(current_bar, current_chord)
+        [new_bar, to_switch] = proj.move_right(current_bar, current_chord)
     else:
-        [new_bar, to_switch] = move_left(current_bar, current_chord)
+        [new_bar, to_switch] = proj.move_left(current_bar, current_chord)
 
     # If there is a next/previous chord (regardless of bar)
     if to_switch:
@@ -722,10 +729,10 @@ def shift(pad : curses.window, direction : str):
         if to_switch.length != current_chord.length:
             return
 
-        new_index : int = score[new_bar].chords.index(to_switch)
+        new_index : int = proj.score[new_bar].chords.index(to_switch)
 
-        score[current_bar].chords[index] = to_switch
-        score[new_bar].chords[new_index] = current_chord
+        proj.score[current_bar].chords[index] = to_switch
+        proj.score[new_bar].chords[new_index] = current_chord
 
         # Updating the y coordinates of the relevant chords
         temp = current_chord.y
@@ -736,7 +743,6 @@ def shift(pad : curses.window, direction : str):
 
         Draw.draw_chord(pad, to_switch, STAVE_HEIGHT)
         Draw.draw_chord(pad, current_chord, STAVE_HEIGHT)
-        # navigate_to_note()
 
 def redo_all_pads(score : list[Bar]):
     """Redo all y values of every bar, beat and chord to get true y values."""

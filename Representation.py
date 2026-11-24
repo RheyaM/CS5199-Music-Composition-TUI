@@ -64,6 +64,13 @@ class Representation:
                         notestr += str(int(chord.length))
                     current_len = chord.length
 
+                if chord.staccato:
+                    notestr += "!"
+                if chord.accent:
+                    notestr += ">"
+                if chord.tie:
+                    notestr += "~"
+
                 string += notestr
 
             string += "|"
@@ -157,10 +164,33 @@ class Representation:
             else:
                 raise InvalidCharException("Unrecognised character input")
 
+            # Extract and add on chord attributes. This happens for any number of notes in the chord
+            [chord_attributes, bar_notes] = Representation.extract_chord_attributes(bar_notes)
+            if "!" in chord_attributes:
+                chord.staccato = True
+            if "~" in chord_attributes:
+                chord.tie = True
+            if ">" in chord_attributes:
+                chord.accent = True
+
             bar.chords.append(chord)
 
         bar.redo_y()
         return [bar, bar_notes]
+
+    @staticmethod
+    def extract_chord_attributes(substring : str):
+        """Extract chord specific attributes (staccato, accents, and ties)"""
+
+        attributes = ["!", ">", "~"]
+        chord_attributes = []
+
+        while len(substring) > 0 and substring[0] in attributes:
+            chord_attributes.append(substring[0])
+            substring = substring[1::]
+
+        return [chord_attributes, substring]
+
 
     @staticmethod
     def extract_length(substring):
@@ -173,7 +203,6 @@ class Representation:
                 return [float(length.group(1)), substring[length.end(1)::]]
             return [int(length.group(1)), substring[length.end(1)::]]
         return [Representation.current_length, substring]
-
 
     @staticmethod
     def extract_octave_indicators(substring):
@@ -188,7 +217,6 @@ class Representation:
             return [number, substring[indicators.end(1)::]]
 
         return [0, substring]
-
 
     @staticmethod
     def get_chord_note(substring):
@@ -218,6 +246,10 @@ class Representation:
     @staticmethod
     def extract_note_attributes(substring : str) -> list[str, str]:
         """Extract note attributes (#, b, natural)"""
+
+        attributes = ["#", "-", "n", "!", ">", "~"]
+        index = 0
+        
 
         if len(substring) == 0:
             return [None, substring]
@@ -264,6 +296,8 @@ class Representation:
         else:
             chord.length = length
             Representation.current_length = length
+
+        # Get any chord attributes here (staccato, accent, tie)
 
 
         # Return the substring after the '>' and optional length indicator
