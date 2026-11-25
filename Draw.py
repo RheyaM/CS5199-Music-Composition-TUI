@@ -11,17 +11,19 @@ class Draw:
 
     MIDDLE_C : int = 9
 
-    keys : dict = {"C Major": [], "G Major": [6], "D Major": [6, 9],
+    KEYS : dict = {"C Major": [], "G Major": [6], "D Major": [6, 9],
                 "A Major": [6, 9, 5], "E Major": [6, 9, 5, 8],
                 "B Major": [6, 9, 5, 8, 11], "F# Major": [6, 9, 5, 8, 11, 7],
                 "Db Major": [10, 7, 11, 8, 12], "Ab Major": [10, 7, 11, 8], 
                 "Eb Major": [10, 7, 11], "Bb Major": [10, 7], "F Major": [10]}
 
-    hints = {"q": "Quit", "s": "Save File", "S": "Save File As", "SHIFT-note": "Add Multiple Notes",
+    HINTS = {"q": "Quit", "s": "Save File", "S": "Save File As", "SHIFT-note": "Add Multiple Notes",
              "Opt-Up/Down": "Change Pitch", "SHIFT-Up/Down": "Change Octave", 
              "[": "Decrease Note Length", "]": "Increase Note Length", "!": "Staccato", 
              ">": "Accent", "#": "Sharp", "-": "Flat", "n": "Natural", "z" : "Undo", 
-             "p" : "Play Score", "m" : "Export to PDF", "k" : "Project Settings", "0": "Clear All"}
+             "p" : "Play Score", "v" : "Pause Playback", "m" : "Export to PDF", 
+             "k" : "Project Settings", "0": "Clear All", "h" : "String Input Mode",
+             "CMMD-Left/Right": "Move to Beginning/End"}
 
     @staticmethod
     def draw_treble(pad, x, y):
@@ -77,7 +79,7 @@ class Draw:
 
         # dir represents which direction the coordinates of the notes must change
         start_y = y
-        for sharp in Draw.keys[key]:
+        for sharp in Draw.KEYS[key]:
             pad.addstr(sharp, start_y, char)
             start_y += 1
 
@@ -191,14 +193,17 @@ class Draw:
         x = 0
         y = 0
 
-        for keypress, expl in Draw.hints.items():
+        for keypress, expl in Draw.HINTS.items():
 
             total_len = len(keypress) + 3 + len(expl)
             if y + total_len >= width:
                 x += 1
                 y = 0
 
-            pad.addstr(x, y, keypress, curses.A_STANDOUT)
+            try:
+                pad.addstr(x, y, keypress, curses.A_STANDOUT)
+            except curses.error:
+                return
             y += len(keypress) + 1
             pad.addstr(x, y, expl)
             y += len(expl) + 3
@@ -354,7 +359,7 @@ class Draw:
                     Draw.draw_tie(pads[bar.pad], chord)
 
     @staticmethod
-    def draw_exception(stdscr : curses.window, x : int, y : int, message : str) -> curses.window:
+    def draw_exception(stdscr : curses.window, x : int, message : str) -> curses.window:
         """Draw a rectangle to store the exception"""
         exception_win = curses.newwin(2, 20, x, 1)
         curses.textpad.rectangle(stdscr, x - 1, 0, x + 2, 21)

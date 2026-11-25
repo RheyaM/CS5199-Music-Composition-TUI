@@ -3,7 +3,7 @@ import re
 from Objects.Bar import Bar
 from Objects.Chord import Chord
 from Project import Project
-from Exceptions import InvalidCharException
+from Exceptions import InvalidCharException, NoLengthGivenException
 
 class Representation:
     """Class for converting score to strings and vice versa"""
@@ -145,7 +145,6 @@ class Representation:
 
             if ch == "<":
                 [chord, bar_notes] = Representation.extract_chord(bar_notes)
-                Representation.current_length = chord.length
 
             elif ch in Representation.NOTE_DICT or ch == "r":
                 [pitch, bar_notes] = Representation.get_chord_note(bar_notes)
@@ -155,15 +154,15 @@ class Representation:
                 # Determining the length of the note
                 [length, bar_notes] = Representation.extract_length(bar_notes)
 
-                Representation.current_length = length
-
                 chord = Chord(pitch, length, 0)
 
                 if attribute is not None:
                     chord.notes[0].toggle_attribute(attribute)
 
             else:
-                raise InvalidCharException("Unrecognised character input")
+                raise InvalidCharException("Unrecognised character input", ch)
+
+            Representation.current_length = chord.length
 
             # Extract and add on chord attributes. This happens for any number of notes in the chord
             [chord_attributes, bar_notes] = Representation.extract_chord_attributes(bar_notes)
@@ -203,6 +202,8 @@ class Representation:
             if length.group(1)[0] == ".":
                 return [float(length.group(1)), substring[length.end(1)::]]
             return [int(length.group(1)), substring[length.end(1)::]]
+        if Representation.current_length == 0:
+            raise NoLengthGivenException()
         return [Representation.current_length, substring]
 
     @staticmethod
@@ -247,10 +248,6 @@ class Representation:
     @staticmethod
     def extract_note_attributes(substring : str) -> list[str, str]:
         """Extract note attributes (#, b, natural)"""
-
-        attributes = ["#", "-", "n", "!", ">", "~"]
-        index = 0
-        
 
         if len(substring) == 0:
             return [None, substring]
@@ -297,7 +294,7 @@ class Representation:
         else:
             chord.length = length
             Representation.current_length = length
-            
+
         # Return the substring after the '>' and optional length indicator
         return [chord, substring]
 

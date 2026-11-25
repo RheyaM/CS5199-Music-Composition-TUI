@@ -4,11 +4,18 @@ class InvalidCharException(Exception):
     """Raised when an invalid character is input in string mode"""
     default_message = "An invalid character was input"
 
-    def __init__(self, message = None):
+    def __init__(self, message = None, ch = None):
         super().__init__(message or self.default_message)
+        self.ch = ch
 
 class ExitTextBoxException(Exception):
     """Raised when the user inputs h to exit string_mode"""
+
+    def __init__(self, *args):
+        super().__init__(*args)
+
+class NoLengthGivenException(Exception):
+    """Raised when no note length is provided in string_mode"""
 
     def __init__(self, *args):
         super().__init__(*args)

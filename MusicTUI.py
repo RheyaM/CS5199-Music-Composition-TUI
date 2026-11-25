@@ -14,13 +14,13 @@ from Draw import Draw
 from Project import Project
 from Representation import Representation
 from Playback import Playback
-from Exceptions import InvalidCharException, ExitTextBoxException
+from Exceptions import InvalidCharException, ExitTextBoxException, NoLengthGivenException
 
 # MIDDLE_C determines the x-coordinates of many features (rests, notes, treble clef, etc.)
 # This allows easier adjustment of fixed coordinates if the maximum size of the stave is changes
 MIDDLE_C : int = 9
 
-NOTE_DICT : dict = {"c": MIDDLE_C + 7, "d": MIDDLE_C + 6, "e": MIDDLE_C + 5, "f": MIDDLE_C + 4, 
+NOTE_DICT : dict = {"c": MIDDLE_C + 7, "d": MIDDLE_C + 6, "e": MIDDLE_C + 5, "f": MIDDLE_C + 4,
                     "g": MIDDLE_C + 3, "a": MIDDLE_C + 2, "b": MIDDLE_C + 1}
 ALL_NOTES : list[str] = ["c", "C", "d", "D", "e", "E", "f", "F", "g", "G", "a", "A", "b", "B"]
 
@@ -245,9 +245,8 @@ def reset_currents(proj : Project):
     current_chord = proj.score[current_bar].chords[0]
     current_note = current_chord.notes[0]
 
-def clear_all() -> Project:   
+def clear_all() -> Project:
     """Clear the entire stave"""
-    global pads
 
     for pad in pads:
         pad.clear()
@@ -258,9 +257,6 @@ def clear_all() -> Project:
 
 def string_mode(proj, stdscr):
     """Switching to string mode"""
-    global current_bar
-    global current_chord
-    global current_note
 
     exception_win = None
     writing_box = curses.newwin(2, stdscr_width - 3, stdscr_height - 5, 0)
@@ -281,7 +277,7 @@ def string_mode(proj, stdscr):
             tb.edit(string_mode_key_inputs)
         except ExitTextBoxException:
             curses.curs_set(0)
-            return
+            return proj
 
         text = tb.gather().strip().replace("\n", "")
         if exception_win is not None:
@@ -292,8 +288,10 @@ def string_mode(proj, stdscr):
             proj = Representation.string_to_proj(text)
             proj.score = redo_bar_lengths(proj.score, proj.beats)
             valid = True
-        except InvalidCharException:
-            exception_win = Draw.draw_exception(stdscr, stdscr_height - 8, 0, "Invalid character\ndetected")
+        except InvalidCharException as err:
+            exception_win = Draw.draw_exception(stdscr, stdscr_height - 8, "Invalid character\ndetected: " + str(err.ch))
+        except NoLengthGivenException:
+            exception_win = Draw.draw_exception(stdscr, stdscr_height - 8, "No length given")
 
     reset_currents(proj)
 
@@ -448,9 +446,6 @@ def redo_bar_lengths(score : list[Bar], length : int) -> list[Bar]:
 
     return new_score
 
-
-# Making a long list of chords
-# TODO: account for change in beats when undoing
 def change_time_signature(score : list[Bar], new_beats : int) -> list[Bar]:
     """Format the project into the new, given time signature"""
     global current_bar
@@ -517,7 +512,6 @@ def change_to_score(current_chords : list[Chord], new_string : str) -> None:
 
     return prev_stack
 
-# TODO: cut the chords of the current bar to only play from current_chord
 def play_audio(proj, file) -> curses.window:
     """Extract the sublist of score to play, then pass to Playback class"""
 
@@ -642,9 +636,6 @@ def get_pad_min_max(score : list[Bar], pad_index : int) -> list[int, int]:
 
 def load(file : str, proj : Project, stdscr : curses.window) -> str:
     """Loading a new score"""
-    global current_bar
-    global current_chord
-    global current_note
 
     stdscr.clear()
     for pad in pads:
@@ -784,10 +775,13 @@ def redo_all_pads(score : list[Bar]):
             if bar.pad >= len(pads):
                 pads.append(curses.newpad(26, 300))
 
-            # Update pad value of all bars that come after
+            # Update pad value of all bars in that same pad
             index = score.index(bar)
             for b in score[index + 1 ::]:
-                b.pad += 1
+                if b.pad == bar.pad - 1:
+                    b.pad += 1
+                else:
+                    break
 
         current_pad = bar.pad
         end_y = bar.endy
@@ -796,8 +790,6 @@ def redo_all_pads(score : list[Bar]):
 
 def dec_length(score : list[Bar]):
     """Decrease the length of the current chords"""
-    global current_chord
-    global current_note
 
     # Do not decrease the length of a tied chord
     if current_chord.tie:
@@ -824,6 +816,7 @@ def dec_length(score : list[Bar]):
         score[current_bar].redo_y()
 
     redo_all_pads(score)
+    shift_visible(score, score[current_bar].pad)
 
 def inc_length(proj : Project):
     """Increase the length of the current chord"""
